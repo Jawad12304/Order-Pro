@@ -8,7 +8,10 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:generate": "turbo run db:generate",
+    "db:push": "turbo run db:push",
+    "db:seed": "turbo run db:seed"
   },
   "devDependencies": {
     "eslint": "^9.39.4",
