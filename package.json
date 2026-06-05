@@ -1,0 +1,30 @@
+{
+  "name": "order-pro-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Restaurant QR Ordering SaaS Platform Monorepo",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.5",
+    "prettier": "^3.8.3",
+    "turbo": "^2.0.4"
+  },
+  "packageManager": "pnpm@11.5.2",
+  "lint-staged": {
+    "**/*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "**/*.{json,md,css}": [
+      "prettier --write"
+    ]
+  }
+}
