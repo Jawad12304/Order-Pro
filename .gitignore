@@ -1,13 +1,20 @@
 # Dependencies
 node_modules/
-/frontend/node_modules/
-/backend/node_modules/
+/apps/web/node_modules/
+/apps/kitchen/node_modules/
+/apps/api/node_modules/
+/packages/shared/node_modules/
 
 # Production builds
 dist/
-/backend/dist/
+/apps/api/dist/
+/packages/shared/dist/
 .next/
-/frontend/.next/
+/apps/web/.next/
+/apps/kitchen/.next/
+
+# Turborepo
+.turbo/
 
 # Environments
 .env
