@@ -9,7 +9,9 @@
     "clean": "rm -rf dist",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -18,9 +20,10 @@
     "@prisma/client": "^5.14.0"
   },
   "devDependencies": {
+    "@order-pro/tsconfig": "workspace:*",
+    "@types/node": "^25.9.1",
     "prisma": "^5.14.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5",
-    "@order-pro/tsconfig": "workspace:*"
+    "typescript": "^5.4.5"
   }
 }

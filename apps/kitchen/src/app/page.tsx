@@ -14,10 +14,12 @@ const INITIAL_ORDERS: Order[] = [
     status: "PENDING",
     customerName: "Alice Smith",
     items: [
-      { productId: "p_1", name: "Truffle Burger", price: 18.50, quantity: 2, notes: "No onions" },
-      { productId: "p_3", name: "Sweet Potato Fries", price: 6.00, quantity: 1 }
+      { menuItemId: "p_1", name: "Truffle Burger", unitPrice: 18.50, quantity: 2, specialInstructions: "No onions" },
+      { menuItemId: "p_3", name: "Sweet Potato Fries", unitPrice: 6.00, quantity: 1 }
     ],
     totalAmount: 43.00,
+    subtotalAmount: 39.81,
+    taxAmount: 3.19,
     createdAt: new Date(Date.now() - 8 * 60 * 1000), // 8 mins ago
     updatedAt: new Date(Date.now() - 8 * 60 * 1000)
   },
@@ -25,13 +27,15 @@ const INITIAL_ORDERS: Order[] = [
     id: "ord_102",
     restaurantId: "rest_alpha",
     tableId: "Table 2",
-    status: "PROCESSING",
+    status: "PREPARING",
     customerName: "Bob Jones",
     items: [
-      { productId: "p_2", name: "Spicy Tuna Roll", price: 16.00, quantity: 3, notes: "Extra ginger" },
-      { productId: "p_4", name: "Edamame", price: 5.00, quantity: 2 }
+      { menuItemId: "p_2", name: "Spicy Tuna Roll", unitPrice: 16.00, quantity: 3, specialInstructions: "Extra ginger" },
+      { menuItemId: "p_4", name: "Edamame", unitPrice: 5.00, quantity: 2 }
     ],
     totalAmount: 58.00,
+    subtotalAmount: 53.70,
+    taxAmount: 4.30,
     createdAt: new Date(Date.now() - 15 * 60 * 1000), // 15 mins ago
     updatedAt: new Date(Date.now() - 15 * 60 * 1000)
   },
@@ -42,10 +46,12 @@ const INITIAL_ORDERS: Order[] = [
     status: "READY",
     customerName: "Carol White",
     items: [
-      { productId: "p_5", name: "Ribeye Steak", price: 34.00, quantity: 1, notes: "Medium rare" },
-      { productId: "p_6", name: "Caesar Salad", price: 12.00, quantity: 1 }
+      { menuItemId: "p_5", name: "Ribeye Steak", unitPrice: 34.00, quantity: 1, specialInstructions: "Medium rare" },
+      { menuItemId: "p_6", name: "Caesar Salad", unitPrice: 12.00, quantity: 1 }
     ],
     totalAmount: 46.00,
+    subtotalAmount: 42.59,
+    taxAmount: 3.41,
     createdAt: new Date(Date.now() - 25 * 60 * 1000), // 25 mins ago
     updatedAt: new Date(Date.now() - 25 * 60 * 1000)
   }
@@ -66,6 +72,7 @@ export default function KitchenPage() {
     socket.on("order-received", (newOrderData: any) => {
       console.log("[KDS] Order received:", newOrderData);
       
+      const subtotal = newOrderData.items?.reduce((acc: number, item: any) => acc + (item.unitPrice * item.quantity), 0) || 0;
       const parsedOrder: Order = {
         id: newOrderData.orderId || `ord_${Math.random().toString(36).substr(2, 9)}`,
         restaurantId: newOrderData.restaurantId,
@@ -73,7 +80,9 @@ export default function KitchenPage() {
         status: "PENDING",
         customerName: newOrderData.customerName || "Customer",
         items: newOrderData.items || [],
-        totalAmount: newOrderData.items?.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0) || 0,
+        subtotalAmount: subtotal,
+        taxAmount: 0,
+        totalAmount: subtotal,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -106,9 +115,9 @@ export default function KitchenPage() {
   // Update order status and emit event
   const updateStatus = (orderId: string, currentStatus: OrderStatus) => {
     let nextStatus: OrderStatus = "PENDING";
-    if (currentStatus === "PENDING") nextStatus = "PROCESSING";
-    else if (currentStatus === "PROCESSING") nextStatus = "READY";
-    else if (currentStatus === "READY") nextStatus = "COMPLETED";
+    if (currentStatus === "PENDING") nextStatus = "PREPARING";
+    else if (currentStatus === "PREPARING") nextStatus = "READY";
+    else if (currentStatus === "READY") nextStatus = "SERVED";
 
     // Update locally first
     setOrders((prev) =>
@@ -159,7 +168,7 @@ export default function KitchenPage() {
               Pending: {orders.filter(o => o.status === "PENDING").length}
             </span>
             <span className="px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-[11px] font-bold text-orange-400">
-              Cooking: {orders.filter(o => o.status === "PROCESSING").length}
+              Cooking: {orders.filter(o => o.status === "PREPARING").length}
             </span>
             <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-emerald-400">
               Ready: {orders.filter(o => o.status === "READY").length}
@@ -185,7 +194,7 @@ export default function KitchenPage() {
       {/* Main Grid */}
       <main className="flex-1 p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start">
         {orders
-          .filter(order => order.status !== "COMPLETED" && order.status !== "CANCELLED")
+          .filter(order => order.status !== "SERVED" && order.status !== "PAID" && order.status !== "CANCELLED")
           .map((order) => {
             const minutesElapsed = getMinutesElapsed(order.createdAt);
             const isLate = minutesElapsed > 15 && order.status !== "READY";
@@ -205,7 +214,7 @@ export default function KitchenPage() {
                 <div className={`px-4 py-2 flex items-center justify-between text-xs font-bold ${
                   order.status === "READY" 
                     ? "bg-emerald-500/10 text-emerald-400 border-b border-emerald-500/10" 
-                    : order.status === "PROCESSING"
+                     : order.status === "PREPARING"
                       ? "bg-orange-500/10 text-orange-400 border-b border-orange-500/10"
                       : "bg-zinc-900 text-zinc-400 border-b border-zinc-900"
                 }`}>
@@ -239,10 +248,10 @@ export default function KitchenPage() {
                             {item.name}
                           </span>
                         </div>
-                        {item.notes && (
+                        {item.specialInstructions && (
                           <div className="mt-1 flex items-start gap-1 text-[11px] text-amber-400 font-medium bg-amber-500/5 border border-amber-500/10 px-2 py-0.5 rounded">
                             <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-                            <span>Notes: {item.notes}</span>
+                            <span>Notes: {item.specialInstructions}</span>
                           </div>
                         )}
                       </div>
@@ -267,9 +276,9 @@ export default function KitchenPage() {
                       Start Cooking
                     </button>
                   )}
-                  {order.status === "PROCESSING" && (
+                  {order.status === "PREPARING" && (
                     <button 
-                      onClick={() => updateStatus(order.id, "PROCESSING")}
+                      onClick={() => updateStatus(order.id, "PREPARING")}
                       className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 transition-all duration-300"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
@@ -290,7 +299,7 @@ export default function KitchenPage() {
             );
           })}
 
-        {orders.filter(order => order.status !== "COMPLETED" && order.status !== "CANCELLED").length === 0 && (
+        {orders.filter(order => order.status !== "SERVED" && order.status !== "PAID" && order.status !== "CANCELLED").length === 0 && (
           <div className="col-span-full py-24 flex flex-col items-center justify-center gap-3 text-zinc-500 border border-dashed border-zinc-800 rounded-3xl">
             <CheckCircle2 className="w-12 h-12 text-zinc-700" />
             <h3 className="text-zinc-400 font-bold text-base">All caught up!</h3>
