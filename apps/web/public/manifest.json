@@ -1,0 +1,17 @@
+{
+  "name": "Zesty Cravings Menu",
+  "short_name": "Menu",
+  "description": "Order food directly from your table.",
+  "start_url": "/menu",
+  "display": "standalone",
+  "background_color": "#fcf9f8",
+  "theme_color": "#ab3500",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

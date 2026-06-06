@@ -1,0 +1,132 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, Menu as MenuIcon, UtensilsCrossed, QrCode, ClipboardList, Settings, LogOut, X, BarChart3 } from "lucide-react";
+import { QueryProvider } from "@/components/providers/QueryProvider";
+import { SocketProvider } from "@/context/SocketContext";
+
+const navItems = [
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/menu", label: "Menu Management", icon: UtensilsCrossed },
+  { href: "/dashboard/tables", label: "Table Management", icon: QrCode },
+  { href: "/dashboard/orders", label: "Live Orders", icon: ClipboardList },
+];
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-surface border-r border-outline-variant/30 text-on-surface w-64 p-4 shadow-sm">
+      <div className="flex items-center gap-2 mb-8 px-2 mt-2">
+        <div className="bg-primary text-on-primary p-1.5 rounded-lg">
+          <UtensilsCrossed size={24} />
+        </div>
+        <h1 className="text-title-lg font-bold tracking-tight text-primary">Order Pro</h1>
+      </div>
+
+      <nav className="flex-1 space-y-2">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-body-md ${
+                isActive 
+                  ? "bg-primary text-on-primary shadow-sm" 
+                  : "text-on-surface hover:bg-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <Icon size={20} />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="mt-auto border-t border-outline-variant/30 pt-4 space-y-2">
+        <Link href="/dashboard/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-on-surface-variant hover:bg-surface-variant text-body-md font-medium">
+          <Settings size={20} />
+          Settings
+        </Link>
+        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-error hover:bg-error-container text-body-md font-medium">
+          <LogOut size={20} />
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <QueryProvider>
+      <SocketProvider>
+        <div className="flex h-screen bg-background w-full overflow-hidden">
+          
+          {/* Desktop Sidebar */}
+          <aside className="hidden md:block shrink-0 h-full">
+            <SidebarContent />
+          </aside>
+
+          {/* Mobile Overlay Sidebar */}
+          {isMobileMenuOpen && (
+            <div className="fixed inset-0 z-50 flex md:hidden">
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+              <div className="relative w-64 h-full z-10 transform transition-transform duration-300">
+                <button 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="absolute right-4 top-4 p-2 bg-surface rounded-full shadow-md z-20"
+                >
+                  <X size={20} />
+                </button>
+                <SidebarContent />
+              </div>
+            </div>
+          )}
+
+          {/* Main Content */}
+          <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            {/* Top Header */}
+            <header className="h-16 shrink-0 bg-surface border-b border-outline-variant/30 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  className="p-2 -ml-2 rounded-lg text-on-surface-variant hover:bg-surface-variant md:hidden"
+                >
+                  <MenuIcon size={24} />
+                </button>
+                
+                <h2 className="text-title-lg font-bold text-on-surface capitalize hidden sm:block">
+                  {pathname.split("/").pop() === "dashboard" ? "Overview" : pathname.split("/").pop()}
+                </h2>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-label-lg font-semibold text-on-surface">Admin User</p>
+                    <p className="text-label-sm text-on-surface-variant">Manager</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center text-primary font-bold shadow-inner">
+                    A
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            {/* Scrollable Page Content */}
+            <div className="flex-1 overflow-auto bg-surface-container-lowest p-4 lg:p-8">
+              {children}
+            </div>
+          </main>
+
+        </div>
+      </SocketProvider>
+    </QueryProvider>
+  );
+}

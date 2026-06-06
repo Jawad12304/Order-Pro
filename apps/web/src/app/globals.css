@@ -1,26 +1,140 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fcf9f8;
+  --foreground: #1c1b1b;
+  /* Dynamic Theme Variables */
+  --theme-primary: #ab3500;
+  --theme-on-primary: #ffffff;
+  --theme-primary-container: #ff6b35;
+  --theme-on-primary-container: #5f1900;
 }
 
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  
+  /* Theme Colors */
+  --color-surface-bright: #fcf9f8;
+  --color-error-container: #ffdad6;
+  --color-secondary-container: #91f78e;
+  --color-on-secondary-fixed: #002204;
+  --color-secondary: #006e1c;
+  --color-on-secondary: #ffffff;
+  --color-primary-fixed: #ffdbd0;
+  --color-on-primary-fixed-variant: #832600;
+  --color-on-background: #1c1b1b;
+  --color-surface-variant: #e5e2e1;
+  --color-surface-container-highest: #e5e2e1;
+  --color-inverse-on-surface: #f3f0ef;
+  --color-surface-dim: #dcd9d9;
+  --color-on-surface-variant: #594139;
+  --color-surface-tint: #ab3500;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-error-container: #93000a;
+  --color-outline-variant: #e1bfb5;
+  --color-primary: var(--theme-primary);
+  --color-on-primary: var(--theme-on-primary);
+  --color-tertiary: #0061a4;
+  --color-on-tertiary-fixed: #001d36;
+  --color-error: #ba1a1a;
+  --color-surface-container-high: #eae7e7;
+  --color-secondary-fixed: #94f990;
+  --color-tertiary-fixed: #d1e4ff;
+  --color-inverse-surface: #313030;
+  --color-on-tertiary: #ffffff;
+  --color-secondary-fixed-dim: #78dc77;
+  --color-surface-container-low: #f6f3f2;
+  --color-on-surface: #1c1b1b;
+  --color-on-error: #ffffff;
+  --color-on-primary-container: var(--theme-on-primary-container);
+  --color-tertiary-container: #309efb;
+  --color-on-primary-fixed: #390c00;
+  --color-on-tertiary-fixed-variant: #00497d;
+  --color-primary-container: var(--theme-primary-container);
+  --color-on-secondary-container: #00731e;
+  --color-outline: #8d7168;
+  --color-on-tertiary-container: #00335a;
+  --color-inverse-primary: #ffb59d;
+  --color-surface: #fcf9f8;
+  --color-tertiary-fixed-dim: #9ecaff;
+  --color-primary-fixed-dim: #ffb59d;
+  --color-surface-container: #f0eded;
+  --color-on-secondary-fixed-variant: #005313;
+
+  /* Spacing */
+  --spacing-margin-mobile: 16px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-base: 4px;
+  --spacing-sm: 8px;
+  --spacing-xs: 4px;
+  --spacing-gutter: 16px;
+  --spacing-margin-desktop: 48px;
+  --spacing-xl: 32px;
+
+  /* Typography */
+  --font-price-display: "Plus Jakarta Sans", sans-serif;
+  --font-title-md: "Plus Jakarta Sans", sans-serif;
+  --font-headline-xl: "Plus Jakarta Sans", sans-serif;
+  --font-label-caps: "Plus Jakarta Sans", sans-serif;
+  --font-headline-lg: "Plus Jakarta Sans", sans-serif;
+  --font-headline-lg-mobile: "Plus Jakarta Sans", sans-serif;
+  --font-body-lg: "Plus Jakarta Sans", sans-serif;
+  --font-body-sm: "Plus Jakarta Sans", sans-serif;
+
+  /* Font Sizes */
+  --text-price-display: 20px;
+  --text-price-display--line-height: 24px;
+  --text-price-display--letter-spacing: 0.01em;
+  --text-price-display--font-weight: 800;
+
+  --text-title-md: 18px;
+  --text-title-md--line-height: 24px;
+  --text-title-md--font-weight: 600;
+
+  --text-headline-xl: 32px;
+  --text-headline-xl--line-height: 40px;
+  --text-headline-xl--letter-spacing: -0.02em;
+  --text-headline-xl--font-weight: 800;
+
+  --text-label-caps: 12px;
+  --text-label-caps--line-height: 16px;
+  --text-label-caps--letter-spacing: 0.05em;
+  --text-label-caps--font-weight: 700;
+
+  --text-headline-lg: 24px;
+  --text-headline-lg--line-height: 32px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 700;
+
+  --text-headline-lg-mobile: 20px;
+  --text-headline-lg-mobile--line-height: 28px;
+  --text-headline-lg-mobile--font-weight: 700;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 400;
+
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--font-weight: 400;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Plus Jakarta Sans", Arial, Helvetica, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  min-height: max(884px, 100dvh);
 }
