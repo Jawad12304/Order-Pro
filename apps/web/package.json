@@ -11,6 +11,8 @@
   "dependencies": {
     "@order-pro/database": "workspace:*",
     "@order-pro/shared": "workspace:*",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.107.0",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
