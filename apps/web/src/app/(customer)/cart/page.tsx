@@ -6,9 +6,10 @@ import { Trash2, Plus, Minus, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { placeOrder } from "@/app/actions/orders";
 
 export default function CartPage() {
-  const { state, dispatch, subtotal, taxRate, taxAmount, totalAmount } = useCart();
+  const { state, dispatch, subtotal, taxRate, taxAmount, totalAmount, resolveTableId } = useCart();
   const router = useRouter();
 
   const [customerName, setCustomerName] = useState("");
@@ -18,15 +19,17 @@ export default function CartPage() {
 
   const placeOrderMutation = useMutation({
     mutationFn: async () => {
-      // Create payload matching schema requirements
+      if (!state.restaurantId) {
+        throw new Error("Restaurant not resolved. Please refresh the page.");
+      }
+
+      // Resolve table number to real CUID
+      const tableId = state.tableNumber ? resolveTableId(state.tableNumber) : null;
+
       const payload = {
-        restaurantId: state.restaurantId || "placeholder-restaurant-id", // Should be fetched from context/layout
-        tableId: state.tableNumber ? `table-${state.tableNumber}` : null, // Mapped locally
+        restaurantId: state.restaurantId,
+        tableId: tableId,
         customerName: customerName,
-        notes: `Phone: ${customerPhone}\n\n${orderNotes}`.trim(),
-        subtotalAmount: subtotal,
-        taxAmount: taxAmount,
-        totalAmount: totalAmount,
         items: state.items.map(item => ({
           menuItemId: item.menuItemId,
           quantity: item.quantity,
@@ -36,21 +39,17 @@ export default function CartPage() {
         }))
       };
 
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await placeOrder(payload);
 
-      if (!res.ok) {
+      if (!res || !res.id) {
         throw new Error("Failed to place order");
       }
 
-      return res.json();
+      return res;
     },
     onSuccess: (data) => {
       dispatch({ type: "CLEAR_CART" });
-      router.push(`/order/${data.orderId}`);
+      router.push(`/order/${data.id}`);
     },
     onError: (err) => {
       setErrorToast("Something went wrong. Please try again.");

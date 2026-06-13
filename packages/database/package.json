@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
+    "db:seed:auth": "ts-node prisma/seed-auth.ts",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio"
   },
@@ -17,10 +18,12 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.14.0"
+    "@prisma/client": "^5.14.0",
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "@order-pro/tsconfig": "workspace:*",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^25.9.1",
     "prisma": "^5.14.0",
     "ts-node": "^10.9.2",

@@ -11,20 +11,27 @@ export default async function CustomerLayout({ children }: { children: React.Rea
   const host = headersList.get("host") || "";
   const subdomain = host.split(".")[0];
   
-  // Also check query params if they exist, but layout doesn't easily get searchParams.
-  // Host extraction is our primary multi-tenancy strategy.
-
   let themeColor = "#ab3500"; // Default primary
   let name = "Restaurant";
+  let restaurantId: string | null = null;
+  let tablesMap: Record<number, string> = {}; // tableNumber -> tableId (CUID)
   
   try {
     const restaurant = await prisma.restaurant.findUnique({
       where: { slug: subdomain },
-      select: { themeColor: true, name: true },
+      select: { id: true, themeColor: true, name: true },
     });
-    if (restaurant && restaurant.themeColor) {
-      themeColor = restaurant.themeColor;
+    if (restaurant) {
+      themeColor = restaurant.themeColor || themeColor;
       name = restaurant.name;
+      restaurantId = restaurant.id;
+
+      // Build a lookup of table numbers to CUIDs for the cart
+      const tables = await prisma.table.findMany({
+        where: { restaurantId: restaurant.id },
+        select: { id: true, number: true },
+      });
+      tablesMap = Object.fromEntries(tables.map(t => [t.number, t.id]));
     }
   } catch (error) {
     console.error("Failed to load restaurant theme", error);
@@ -52,7 +59,7 @@ export default async function CustomerLayout({ children }: { children: React.Rea
     <div dir={isArabic ? "rtl" : "ltr"} className="bg-background text-on-surface w-full h-full min-h-screen">
       <style dangerouslySetInnerHTML={{ __html: customThemeStyle }} />
         <QueryProvider>
-          <CartProvider>
+          <CartProvider restaurantId={restaurantId} tablesMap={tablesMap}>
             {/* Top Navigation Shell */}
             <header className="bg-surface/70 dark:bg-surface/70 backdrop-blur-xl shadow-sm docked full-width top-0 sticky z-50 flex justify-between items-center w-full px-margin-mobile h-16">
               <div className="flex items-center gap-sm">
@@ -78,3 +85,4 @@ export default async function CustomerLayout({ children }: { children: React.Rea
     </div>
   );
 }
+

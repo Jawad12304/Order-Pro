@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@order-pro/database";
 import { withCache } from "@/lib/redis";
+import { getRestaurantId } from "@/lib/restaurant";
 
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const limit = parseInt(searchParams.get("limit") || "10", 10);
-    const restaurantId = searchParams.get("restaurantId") || "restaurant_123";
+    const restaurantId = searchParams.get("restaurantId") || await getRestaurantId();
+    if (!restaurantId) {
+      return NextResponse.json({ error: "Restaurant not found" }, { status: 404 });
+    }
 
     const cacheKey = `analytics:top-items:${restaurantId}:${limit}`;
 

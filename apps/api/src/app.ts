@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 
 const app = express();
@@ -43,10 +44,17 @@ app.use(limiter);
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 import { requireAuth, requireTenant, requireRole } from "./middleware/auth";
 import qrRoutes from "./routes/qr.routes";
+import authRoutes from "./routes/auth.routes";
+import usersRoutes from "./routes/users.routes";
 import { z } from "zod";
+
+// --- MenuQR AUTH ROUTES ---
+app.use("/api/auth", authRoutes);
+app.use("/api/users", usersRoutes);
 
 // Zod schema for order validation
 const orderSchema = z.object({

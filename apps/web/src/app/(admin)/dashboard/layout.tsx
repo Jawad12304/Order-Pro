@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Menu as MenuIcon, UtensilsCrossed, QrCode, ClipboardList, Settings, LogOut, X, BarChart3 } from "lucide-react";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { SocketProvider } from "@/context/SocketContext";
@@ -15,9 +15,51 @@ const navItems = [
   { href: "/dashboard/orders", label: "Live Orders", icon: ClipboardList },
 ];
 
+interface AuthData {
+  username: string;
+  role: string;
+  displayName: string;
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [auth, setAuth] = useState<AuthData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("order-pro-auth");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setAuth(parsed);
+      } catch {
+        router.push("/login");
+        return;
+      }
+    } else {
+      router.push("/login");
+      return;
+    }
+    setLoading(false);
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("order-pro-auth");
+    document.cookie = "order-pro-auth=; path=/; max-age=0";
+    router.push("/login");
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!auth) return null;
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-surface border-r border-outline-variant/30 text-on-surface w-64 p-4 shadow-sm">
@@ -51,11 +93,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       <div className="mt-auto border-t border-outline-variant/30 pt-4 space-y-2">
-        <Link href="/dashboard/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-on-surface-variant hover:bg-surface-variant text-body-md font-medium">
+        <Link href="/dashboard/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-on-surface-variant hover:bg-surface-variant text-body-md font-medium">
           <Settings size={20} />
           Settings
         </Link>
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-error hover:bg-error-container text-body-md font-medium">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-error hover:bg-error-container text-body-md font-medium"
+        >
           <LogOut size={20} />
           Sign Out
         </button>
@@ -109,11 +154,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3">
                   <div className="text-right hidden sm:block">
-                    <p className="text-label-lg font-semibold text-on-surface">Admin User</p>
-                    <p className="text-label-sm text-on-surface-variant">Manager</p>
+                    <p className="text-label-lg font-semibold text-on-surface">{auth.displayName}</p>
+                    <p className="text-label-sm text-on-surface-variant capitalize">{auth.role}</p>
                   </div>
                   <div className="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center text-primary font-bold shadow-inner">
-                    A
+                    {auth.displayName.charAt(0).toUpperCase()}
                   </div>
                 </div>
               </div>

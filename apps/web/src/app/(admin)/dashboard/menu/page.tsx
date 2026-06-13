@@ -1,46 +1,40 @@
 "use client";
 
 import React, { useState } from "react";
+import dynamic from "next/dynamic";
+import { useQuery } from "@tanstack/react-query";
 import { Plus, GripVertical, Image as ImageIcon, X, Loader2, Sparkles, Trash2, FolderOutput, Eye } from "lucide-react";
+import { useRestaurantId } from "@/hooks/useRestaurantId";
 import imageCompression from "browser-image-compression";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  rectSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { ModifierGroupEditor, ModifierGroup } from "@/components/admin/ModifierGroupEditor";
+import { 
+  getCategories, 
+  getMenuItems, 
+  updateCategorySortOrders, 
+  updateMenuItemSortOrders, 
+  updateMenuItemAvailability, 
+  deleteMenuItems,
+  createMenuItem,
+  updateMenuItem
+} from "@/app/actions/menu";
+import { arrayMove } from "@dnd-kit/sortable";
 
-// --- MOCK DATA ---
-const initialCategories = [
-  { id: "cat-1", name: "Starters" },
-  { id: "cat-2", name: "Mains" },
-  { id: "cat-3", name: "Desserts" },
-  { id: "cat-4", name: "Beverages" },
-];
+// Dynamic imports for dnd-kit to reduce initial bundle size
+const DndContext = dynamic(() => import("@dnd-kit/core").then((mod) => mod.DndContext), { ssr: false });
+const SortableContext = dynamic(() => import("@dnd-kit/sortable").then((mod) => mod.SortableContext), { ssr: false });
+const verticalListSortingStrategy = dynamic(() => import("@dnd-kit/sortable").then((mod) => mod.verticalListSortingStrategy), { ssr: false }) as any;
+const rectSortingStrategy = dynamic(() => import("@dnd-kit/sortable").then((mod) => mod.rectSortingStrategy), { ssr: false }) as any;
 
-const initialItems = [
-  { id: "item-1", categoryId: "cat-1", name: "Garlic Bread", price: 6.99, isAvailable: true },
-  { id: "item-2", categoryId: "cat-1", name: "Bruschetta", price: 8.50, isAvailable: true },
-  { id: "item-3", categoryId: "cat-2", name: "Margherita Pizza", price: 14.99, isAvailable: false },
-  { id: "item-4", categoryId: "cat-2", name: "Spicy Pasta", price: 16.50, isAvailable: true },
-];
+// To use hooks like useSortable inside dynamically imported components, we must import them normally
+// but we only render them when DndContext is ready.
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 const DIETARY_TAGS = ["Vegan", "Vegetarian", "Gluten-Free", "Spicy"];
 const ALLERGENS = ["Dairy", "Nuts", "Eggs", "Soy", "Shellfish", "Wheat"];
 
-// --- DND COMPONENTS ---
 function SortableCategoryItem({ id, name, activeId, onClick }: { id: string, name: string, activeId: string, onClick: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : 1 };
@@ -83,12 +77,12 @@ function SortableMenuItemCard({ item, isSelected, onToggleSelect, onEdit, onTogg
         
         {/* Toggle Availability */}
         <label className="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" className="sr-only peer" checked={item.isAvailable} onChange={() => onToggleAvailability(item.id)} />
+          <input type="checkbox" className="sr-only peer" checked={item.isAvailable} onChange={() => onToggleAvailability(item.id, !item.isAvailable)} />
           <div className="w-10 h-5 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
         </label>
       </div>
       <div className="flex justify-end gap-2 mt-auto pt-2 border-t border-outline-variant/20">
-        <button onClick={() => onEdit(item)} className="text-label-sm font-semibold text-primary hover:underline">Edit Details</button>
+        <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} className="text-label-sm font-semibold text-primary hover:underline">Edit Details</button>
       </div>
     </div>
   );
@@ -96,9 +90,10 @@ function SortableMenuItemCard({ item, isSelected, onToggleSelect, onEdit, onTogg
 
 // --- MAIN PAGE ---
 export default function MenuManagementPage() {
-  const [categories, setCategories] = useState(initialCategories);
-  const [items, setItems] = useState(initialItems);
-  const [activeCategoryId, setActiveCategoryId] = useState(initialCategories[0].id);
+  const { restaurantId, loading: resLoading } = useRestaurantId();
+  const [categories, setCategories] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]);
+  const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -133,24 +128,65 @@ export default function MenuManagementPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleCategoryDragEnd = (event: any) => {
+  const { data: fetchedCategories = [], isLoading: loadingCategories } = useQuery({
+    queryKey: ['categories', restaurantId],
+    queryFn: () => getCategories(restaurantId!),
+    enabled: !!restaurantId,
+  });
+
+  const { data: fetchedItems = [], isLoading: loadingItems } = useQuery({
+    queryKey: ['menuItems', restaurantId],
+    queryFn: () => getMenuItems(restaurantId!),
+    enabled: !!restaurantId,
+  });
+
+  React.useEffect(() => {
+    if (fetchedCategories.length > 0 && !activeCategoryId) {
+      setActiveCategoryId(fetchedCategories[0].id);
+    }
+  }, [fetchedCategories, activeCategoryId]);
+
+  React.useEffect(() => {
+    setCategories(fetchedCategories);
+  }, [fetchedCategories]);
+
+  React.useEffect(() => {
+    setItems(fetchedItems);
+  }, [fetchedItems]);
+
+  const loading = resLoading || loadingCategories || loadingItems;
+
+  const handleCategoryDragEnd = async (event: any) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setCategories((cats) => {
         const oldIndex = cats.findIndex((i) => i.id === active.id);
         const newIndex = cats.findIndex((i) => i.id === over.id);
-        return arrayMove(cats, oldIndex, newIndex);
+        const newCats = arrayMove(cats, oldIndex, newIndex);
+        
+        // Optimistic UI + Save to DB
+        const updates = newCats.map((c, index) => ({ id: c.id, sortOrder: index }));
+        updateCategorySortOrders(updates).catch(console.error);
+        
+        return newCats;
       });
     }
   };
 
-  const handleItemDragEnd = (event: any) => {
+  const handleItemDragEnd = async (event: any) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setItems((itms) => {
         const oldIndex = itms.findIndex((i) => i.id === active.id);
         const newIndex = itms.findIndex((i) => i.id === over.id);
-        return arrayMove(itms, oldIndex, newIndex);
+        const newItems = arrayMove(itms, oldIndex, newIndex);
+        
+        // Optimistic UI + Save to DB
+        const categoryItems = newItems.filter(i => i.categoryId === activeCategoryId);
+        const updates = categoryItems.map((i, index) => ({ id: i.id, sortOrder: index, categoryId: activeCategoryId }));
+        updateMenuItemSortOrders(updates).catch(console.error);
+        
+        return newItems;
       });
     }
   };
@@ -165,16 +201,37 @@ export default function MenuManagementPage() {
     });
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if(confirm(`Are you sure you want to delete ${selectedItemIds.size} items?`)) {
+      const idsToDelete = Array.from(selectedItemIds);
+      
+      // Optimistic update
       setItems(items.filter(i => !selectedItemIds.has(i.id)));
       setSelectedItemIds(new Set());
+      
+      // DB call
+      await deleteMenuItems(idsToDelete);
     }
   };
 
-  const handleBulkToggleAvailability = () => {
-    setItems(items.map(i => selectedItemIds.has(i.id) ? { ...i, isAvailable: !i.isAvailable } : i));
+  const handleBulkToggleAvailability = async () => {
+    const idsToToggle = Array.from(selectedItemIds);
+    // Optimistic
+    setItems(items.map(i => idsToToggle.includes(i.id) ? { ...i, isAvailable: !i.isAvailable } : i));
     setSelectedItemIds(new Set());
+    
+    // DB
+    for (const id of idsToToggle) {
+      const item = items.find(i => i.id === id);
+      if (item) {
+        await updateMenuItemAvailability(id, !item.isAvailable);
+      }
+    }
+  };
+
+  const handleItemToggleAvailability = async (id: string, newAvailability: boolean) => {
+    setItems(items.map(i => i.id === id ? { ...i, isAvailable: newAvailability } : i));
+    await updateMenuItemAvailability(id, newAvailability);
   };
 
   // --- FORM HANDLERS ---
@@ -205,18 +262,9 @@ export default function MenuManagementPage() {
 
     try {
       setIsUploading(true);
-      
-      // 1. Compress Image using browser-image-compression
-      const options = {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1024,
-        useWebWorker: true,
-      };
+      const options = { maxSizeMB: 1, maxWidthOrHeight: 1024, useWebWorker: true };
       const compressedFile = await imageCompression(file, options);
-      console.log(`Original: ${file.size / 1024 / 1024} MB, Compressed: ${compressedFile.size / 1024 / 1024} MB`);
-
-      // 2. Mock Cloudinary Upload (In production, POST to cloudinary URL here)
-      // We simulate a network delay and just use local object URL for preview
+      
       await new Promise(r => setTimeout(r, 1500));
       const previewUrl = URL.createObjectURL(compressedFile);
       setFormData(prev => ({ ...prev, imageUrl: previewUrl }));
@@ -232,7 +280,6 @@ export default function MenuManagementPage() {
   const mockDeepLTranslation = async () => {
     if (!formData.name && !formData.description) return;
     setIsTranslating(true);
-    // Simulate API call
     await new Promise(r => setTimeout(r, 1000));
     setFormData(prev => ({
       ...prev,
@@ -241,7 +288,48 @@ export default function MenuManagementPage() {
     setIsTranslating(false);
   };
 
-  const filteredItems = items.filter(i => i.categoryId === activeCategoryId);
+  const handleSaveItem = async () => {
+    if (!restaurantId) return;
+    try {
+      const payload = {
+        restaurantId,
+        categoryId: formData.categoryId,
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price) || 0,
+        imageUrl: formData.imageUrl,
+        isAvailable: formData.isAvailable,
+        prepTimeMins: parseInt(formData.prepTime) || null,
+        dietaryTags: formData.dietaryTags,
+        allergens: formData.allergens,
+        modifierGroups: formData.modifierGroups
+      };
+
+      if (editingItem) {
+        await updateMenuItem(editingItem.id, payload);
+      } else {
+        await createMenuItem(payload);
+      }
+
+      // Reload
+      const fetchedItems = await getMenuItems(restaurantId);
+      setItems(fetchedItems);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save item:", error);
+      alert("Failed to save item");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const filteredItems = items.filter(i => i.categoryId === activeCategoryId).sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row gap-6 animate-in fade-in duration-300 relative">
@@ -263,13 +351,17 @@ export default function MenuManagementPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCategoryDragEnd}>
-            <SortableContext items={categories.map(c => c.id)} strategy={verticalListSortingStrategy}>
-              {categories.map((cat) => (
-                <SortableCategoryItem key={cat.id} id={cat.id} name={cat.name} activeId={activeCategoryId} onClick={() => setActiveCategoryId(cat.id)} />
-              ))}
-            </SortableContext>
-          </DndContext>
+          {categories.length > 0 ? (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCategoryDragEnd}>
+              <SortableContext items={categories.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                {categories.map((cat) => (
+                  <SortableCategoryItem key={cat.id} id={cat.id} name={cat.name} activeId={activeCategoryId} onClick={() => setActiveCategoryId(cat.id)} />
+                ))}
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="text-center text-sm text-on-surface-variant py-8">No categories found.</div>
+          )}
         </div>
       </div>
 
@@ -282,30 +374,30 @@ export default function MenuManagementPage() {
             </h3>
             <span className="text-label-sm bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded-full">{filteredItems.length} items</span>
           </div>
-          <button onClick={() => openModal()} className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-xl font-label-md shadow-sm hover:opacity-90 transition-opacity">
+          <button onClick={() => openModal()} className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-xl font-label-md shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50" disabled={!activeCategoryId}>
             <Plus size={18} /> Add Item
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-20">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
-            <SortableContext items={filteredItems.map(i => i.id)} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredItems.map(item => (
-                  <SortableMenuItemCard 
-                    key={item.id} 
-                    item={item} 
-                    isSelected={selectedItemIds.has(item.id)}
-                    onToggleSelect={toggleItemSelection}
-                    onEdit={openModal}
-                    onToggleAvailability={(id: string) => setItems(items.map(i => i.id === id ? { ...i, isAvailable: !i.isAvailable } : i))}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-          
-          {filteredItems.length === 0 && (
+          {filteredItems.length > 0 ? (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
+              <SortableContext items={filteredItems.map(i => i.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {filteredItems.map(item => (
+                    <SortableMenuItemCard 
+                      key={item.id} 
+                      item={item} 
+                      isSelected={selectedItemIds.has(item.id)}
+                      onToggleSelect={toggleItemSelection}
+                      onEdit={openModal}
+                      onToggleAvailability={handleItemToggleAvailability}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
             <div className="py-12 text-center text-on-surface-variant">No items in this category.</div>
           )}
         </div>
@@ -508,7 +600,7 @@ export default function MenuManagementPage() {
 
             <div className="p-6 border-t border-outline-variant/30 flex justify-end gap-3 bg-surface-container-lowest mt-auto sm:rounded-b-3xl">
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl font-label-lg text-on-surface hover:bg-surface-variant transition-colors border border-transparent hover:border-outline-variant/30">Cancel</button>
-              <button onClick={() => setIsModalOpen(false)} className="px-8 py-2.5 rounded-xl font-label-lg bg-primary text-on-primary hover:opacity-90 shadow-sm transition-opacity">Save Item</button>
+              <button onClick={handleSaveItem} className="px-8 py-2.5 rounded-xl font-label-lg bg-primary text-on-primary hover:opacity-90 shadow-sm transition-opacity">Save Item</button>
             </div>
           </div>
         </div>

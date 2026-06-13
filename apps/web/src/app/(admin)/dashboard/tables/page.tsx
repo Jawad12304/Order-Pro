@@ -4,17 +4,18 @@ import React, { useRef } from "react";
 import { Download, RefreshCw, Printer, Plus } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
-const mockTables = [
-  { id: "t1", number: 1, capacity: 2, status: "AVAILABLE" },
-  { id: "t2", number: 2, capacity: 4, status: "OCCUPIED" },
-  { id: "t3", number: 3, capacity: 4, status: "AVAILABLE" },
-  { id: "t4", number: 4, capacity: 6, status: "RESERVED" },
-  { id: "t5", number: 5, capacity: 2, status: "AVAILABLE" },
-  { id: "t6", number: 6, capacity: 8, status: "AVAILABLE" },
-];
+import { getTables } from "@/app/actions/tables";
+import { useRestaurantId } from "@/hooks/useRestaurantId";
 
 export default function TablesManagementPage() {
   const printRef = useRef<HTMLDivElement>(null);
+  const { restaurantId, loading: resLoading } = useRestaurantId();
+  const [tables, setTables] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (resLoading || !restaurantId) return;
+    getTables(restaurantId).then(setTables).catch(console.error);
+  }, [restaurantId, resLoading]);
 
   const handlePrint = () => {
     window.print();
@@ -63,7 +64,7 @@ export default function TablesManagementPage() {
 
       {/* Grid of Tables */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 print:grid-cols-2 print:gap-12" ref={printRef}>
-        {mockTables.map(table => (
+        {tables.map(table => (
           <div key={table.id} className="bg-surface rounded-2xl p-6 shadow-sm border border-outline-variant/30 flex flex-col items-center print:break-inside-avoid print:shadow-none print:border-2 print:border-black">
             <div className="w-full flex justify-between items-start mb-6 print:hidden">
               <div>

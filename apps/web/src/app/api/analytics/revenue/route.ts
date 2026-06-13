@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@order-pro/database";
 import { withCache } from "@/lib/redis";
+import { getRestaurantId } from "@/lib/restaurant";
 
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const startStr = searchParams.get("start");
     const endStr = searchParams.get("end");
-    const restaurantId = searchParams.get("restaurantId") || "restaurant_123"; // Mock tenant
+    const restaurantId = searchParams.get("restaurantId") || await getRestaurantId();
+    if (!restaurantId) {
+      return NextResponse.json({ error: "Restaurant not found" }, { status: 404 });
+    }
 
     if (!startStr || !endStr) {
       return NextResponse.json({ error: "Missing start or end date" }, { status: 400 });

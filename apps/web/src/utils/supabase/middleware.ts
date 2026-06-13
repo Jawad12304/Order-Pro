@@ -31,25 +31,51 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch (err) {
+    console.error("Supabase middleware error:", err);
+    // Continue with user = null
+  }
 
-  if (
-    !user &&
-    request.nextUrl.pathname.startsWith("/dashboard")
-  ) {
+  const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/superadmin");
+  const isLoginPage = request.nextUrl.pathname === "/" || request.nextUrl.pathname === "/login";
+
+  // Check legacy local auth cookie for demo mode
+  let localUser = null;
+  const localAuthCookie = request.cookies.get("order-pro-auth");
+  if (!user && localAuthCookie?.value) {
+    try {
+      localUser = JSON.parse(localAuthCookie.value);
+    } catch {}
+  }
+
+  const activeUser = user || localUser;
+  const activeRole = user?.user_metadata?.role || localUser?.role;
+
+  if (!activeUser && isProtectedRoute) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  // If user is logged in, and tries to go to /login, redirect to /dashboard
-  if (user && request.nextUrl.pathname.startsWith("/login")) {
+  // If user is logged in, and tries to go to login page, redirect to /dashboard (or superadmin if applicable)
+  if (activeUser && isLoginPage) {
+      const url = request.nextUrl.clone();
+      url.pathname = activeRole === "superadmin" ? "/superadmin" : "/dashboard";
+      return NextResponse.redirect(url);
+  }
+
+  // SuperAdmin route protection
+  if (activeUser && request.nextUrl.pathname.startsWith("/superadmin")) {
+    if (activeRole !== "superadmin") {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

@@ -67,6 +67,15 @@ enum StaffRole {
   CHEF
 }
 
+// Roles for the MenuQR username/password authentication system.
+enum UserRole {
+  SUPER_ADMIN      // Sees all restaurants, has no restaurant_id
+  RESTAURANT_ADMIN // Manages one restaurant, creates staff users
+  MANAGER          // Manages one restaurant (read/write, no user management)
+  KITCHEN          // Sees only the kitchen display for their restaurant
+  WAITER           // Sees only the waiter app for their restaurant
+}
+
 // ==========================================
 // 1. RESTAURANT (Multi-Tenant Root)
 // ==========================================
@@ -93,6 +102,7 @@ model Restaurant {
   staff          Staff[]
   tableSessions  TableSession[]
   qrScanLogs     QrScanLog[]
+  users          User[]
 
   @@index([isActive])
   @@index([subscriptionPlan])
@@ -361,4 +371,44 @@ model Staff {
 
   @@index([restaurantId, role])
   @@index([restaurantId, isActive])
+}
+
+// ==========================================
+// 13. USER (MenuQR username/password auth)
+// ==========================================
+
+model User {
+  id            String      @id @default(cuid())
+  username      String      // Login identifier (unique within a restaurant)
+  email         String?     @unique
+  passwordHash  String      @map("password_hash") // bcrypt hash
+  role          UserRole
+  restaurantId  String?     @map("restaurant_id") // NULL for SUPER_ADMIN only
+  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  isActive      Boolean     @default(true) @map("is_active")
+  createdBy     String?     @map("created_by") // id of the user who created this account
+  lastLogin     DateTime?   @map("last_login")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  // The same username can exist in different restaurants, but never twice
+  // within the same restaurant. SUPER_ADMIN (restaurantId = null) is globally
+  // unique because Postgres treats NULLs as distinct in a composite unique.
+  @@unique([username, restaurantId])
+  @@index([restaurantId, role])
+  @@index([restaurantId, isActive])
+}
+
+// ==========================================
+// 14. MASTER ACCESS LOG (audit trail)
+// ==========================================
+
+model MasterAccessLog {
+  id         String   @id @default(cuid())
+  username   String
+  ipAddress  String   @map("ip_address")
+  userAgent  String   @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([username])
+  @@index([createdAt])
 }

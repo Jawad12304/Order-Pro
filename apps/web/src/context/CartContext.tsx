@@ -21,6 +21,7 @@ type CartState = {
   items: CartItem[];
   tableNumber: number | null;
   restaurantId: string | null;
+  tablesMap: Record<number, string>; // tableNumber -> tableId (CUID)
   isHydrated: boolean; // True after first load from localStorage
 };
 
@@ -30,12 +31,13 @@ type CartAction =
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
   | { type: "CLEAR_CART" }
   | { type: "HYDRATE"; payload: CartState }
-  | { type: "SET_META"; payload: { tableNumber: number; restaurantId: string } };
+  | { type: "SET_META"; payload: { tableNumber?: number; restaurantId: string; tablesMap?: Record<number, string> } };
 
 const initialState: CartState = {
   items: [],
   tableNumber: null,
   restaurantId: null,
+  tablesMap: {},
   isHydrated: false,
 };
 
@@ -69,7 +71,12 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     case "HYDRATE":
       return { ...action.payload, isHydrated: true };
     case "SET_META":
-      return { ...state, tableNumber: action.payload.tableNumber, restaurantId: action.payload.restaurantId };
+      return {
+        ...state,
+        tableNumber: action.payload.tableNumber ?? state.tableNumber,
+        restaurantId: action.payload.restaurantId,
+        tablesMap: action.payload.tablesMap ?? state.tablesMap,
+      };
     default:
       return state;
   }
@@ -83,9 +90,17 @@ const CartContext = createContext<{
   taxRate: number;
   taxAmount: number;
   totalAmount: number;
+  /** Resolve a table number to a real CUID from the DB */
+  resolveTableId: (tableNumber: number) => string | null;
 } | null>(null);
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+interface CartProviderProps {
+  children: React.ReactNode;
+  restaurantId?: string | null;
+  tablesMap?: Record<number, string>;
+}
+
+export function CartProvider({ children, restaurantId, tablesMap }: CartProviderProps) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
 
   // Hydrate from sessionStorage on mount
@@ -94,7 +109,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        dispatch({ type: "HYDRATE", payload: parsed });
+        dispatch({ type: "HYDRATE", payload: { ...initialState, ...parsed } });
       } catch (e) {
         console.error("Failed to parse cart from sessionStorage");
         dispatch({ type: "HYDRATE", payload: initialState });
@@ -103,6 +118,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "HYDRATE", payload: initialState });
     }
   }, []);
+
+  // Set restaurant metadata from server-rendered props
+  useEffect(() => {
+    if (restaurantId) {
+      dispatch({
+        type: "SET_META",
+        payload: { restaurantId, tablesMap: tablesMap || {} },
+      });
+    }
+  }, [restaurantId, tablesMap]);
 
   // Persist to sessionStorage whenever state changes
   useEffect(() => {
@@ -121,8 +146,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const taxAmount = subtotal * taxRate;
   const totalAmount = subtotal + taxAmount;
 
+  const resolveTableId = (tableNumber: number): string | null => {
+    return state.tablesMap[tableNumber] ?? null;
+  };
+
   return (
-    <CartContext.Provider value={{ state, dispatch, totalItems, subtotal, taxRate, taxAmount, totalAmount }}>
+    <CartContext.Provider value={{ state, dispatch, totalItems, subtotal, taxRate, taxAmount, totalAmount, resolveTableId }}>
       {children}
     </CartContext.Provider>
   );
@@ -135,3 +164,4 @@ export function useCart() {
   }
   return context;
 }
+

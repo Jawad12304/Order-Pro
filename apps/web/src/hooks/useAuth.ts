@@ -50,11 +50,17 @@ export function useAuth() {
     router.push("/login");
   };
 
+  const getToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  };
+
   return {
     user,
     session,
     loading,
     signOut,
+    getToken,
     supabase,
   };
 }

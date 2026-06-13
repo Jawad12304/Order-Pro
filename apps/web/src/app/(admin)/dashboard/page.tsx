@@ -1,35 +1,24 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { 
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend 
-} from "recharts";
-import { DollarSign, ShoppingBag, Users, Activity, ExternalLink } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { DollarSign, ShoppingBag, Users, Activity, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { getDashboardStats } from "@/app/actions/analytics";
+import { getRecentOrders } from "@/app/actions/orders";
+import { useRestaurantId } from "@/hooks/useRestaurantId";
 
-// --- Mock Data Generators (until real API is attached) ---
-const mockHourlyData = Array.from({ length: 12 }).map((_, i) => ({
-  time: `${i + 10}:00`,
-  orders: Math.floor(Math.random() * 50) + 10,
-  revenue: Math.floor(Math.random() * 500) + 100,
-}));
-
-const mockTopItems = [
-  { name: "Classic Cheeseburger", sales: 124 },
-  { name: "Truffle Fries", sales: 98 },
-  { name: "Spicy Chicken Sandwich", sales: 85 },
-  { name: "Margherita Pizza", sales: 64 },
-  { name: "Craft Cola", sales: 42 },
-];
-
-const mockRecentOrders = [
-  { id: "ord_101", table: "T-4", items: 3, total: 45.50, status: "PENDING", time: "2 min ago" },
-  { id: "ord_102", table: "T-12", items: 1, total: 12.00, status: "PREPARING", time: "5 min ago" },
-  { id: "ord_103", table: "T-2", items: 4, total: 89.90, status: "READY", time: "12 min ago" },
-  { id: "ord_104", table: "T-8", items: 2, total: 34.00, status: "COMPLETED", time: "25 min ago" },
-  { id: "ord_105", table: "T-1", items: 5, total: 112.50, status: "COMPLETED", time: "45 min ago" },
-];
+// Dynamically import Recharts to reduce initial bundle size
+const LineChart = dynamic(() => import("recharts").then((mod) => mod.LineChart), { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center"><Loader2 className="animate-spin text-on-surface-variant" /></div> });
+const Line = dynamic(() => import("recharts").then((mod) => mod.Line), { ssr: false });
+const BarChart = dynamic(() => import("recharts").then((mod) => mod.BarChart), { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center"><Loader2 className="animate-spin text-on-surface-variant" /></div> });
+const Bar = dynamic(() => import("recharts").then((mod) => mod.Bar), { ssr: false });
+const XAxis = dynamic(() => import("recharts").then((mod) => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import("recharts").then((mod) => mod.YAxis), { ssr: false });
+const CartesianGrid = dynamic(() => import("recharts").then((mod) => mod.CartesianGrid), { ssr: false });
+const RechartsTooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), { ssr: false });
+const ResponsiveContainer = dynamic(() => import("recharts").then((mod) => mod.ResponsiveContainer), { ssr: false });
+const Legend = dynamic(() => import("recharts").then((mod) => mod.Legend), { ssr: false });
 
 function KpiCard({ title, value, icon: Icon, trend }: { title: string, value: string | number, icon: any, trend?: string }) {
   return (
@@ -51,19 +40,57 @@ function KpiCard({ title, value, icon: Icon, trend }: { title: string, value: st
 }
 
 export default function DashboardOverviewPage() {
-  
-  // In a real app, we would fetch these from an API
-  // const { data, isLoading } = useQuery({ queryKey: ['dashboard-stats'], queryFn: ... });
+  const { restaurantId, loading: resLoading } = useRestaurantId();
+  const [stats, setStats] = useState<any>(null);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (resLoading || !restaurantId) return;
+
+    async function loadData() {
+      try {
+        const [resStats, resOrders] = await Promise.all([
+          getDashboardStats(restaurantId!),
+          getRecentOrders(restaurantId!),
+        ]);
+        setStats(resStats);
+        setRecentOrders(resOrders);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [restaurantId, resLoading]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Fallback if data is null
+  const displayStats = stats || {
+    todaysRevenue: 0,
+    todaysOrdersCount: 0,
+    activeOrdersCount: 0,
+    hourlyData: [],
+    topItems: []
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* KPI Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <KpiCard title="Total Revenue" value="$2,450.00" icon={DollarSign} trend="+12.5%" />
-        <KpiCard title="Orders Today" value={142} icon={ShoppingBag} trend="+5.2%" />
-        <KpiCard title="Avg Order Value" value="$17.25" icon={Activity} trend="-1.1%" />
-        <KpiCard title="Active Tables" value={8} icon={Users} />
+        <KpiCard title="Total Revenue (Today)" value={`$${displayStats.todaysRevenue.toFixed(2)}`} icon={DollarSign} />
+        <KpiCard title="Orders Today" value={displayStats.todaysOrdersCount} icon={ShoppingBag} />
+        <KpiCard title="Active Orders" value={displayStats.activeOrdersCount} icon={Activity} />
+        <KpiCard title="Avg Order Value" value={`$${(displayStats.todaysOrdersCount > 0 ? displayStats.todaysRevenue / displayStats.todaysOrdersCount : 0).toFixed(2)}`} icon={Users} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -72,7 +99,7 @@ export default function DashboardOverviewPage() {
           <h3 className="text-title-lg font-bold text-on-surface mb-6">Revenue & Orders (Today)</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={mockHourlyData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <LineChart data={displayStats.hourlyData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.2)" />
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: 'var(--theme-on-surface-variant)' }} dy={10} />
                 <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: 'var(--theme-on-surface-variant)' }} dx={-10} />
@@ -94,7 +121,7 @@ export default function DashboardOverviewPage() {
           <h3 className="text-title-lg font-bold text-on-surface mb-6">Top Selling Items</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockTopItems} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <BarChart data={displayStats.topItems} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(150,150,150,0.2)" />
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} tick={{ fill: 'var(--theme-on-surface-variant)', fontSize: 12 }} />
@@ -102,7 +129,7 @@ export default function DashboardOverviewPage() {
                   cursor={{ fill: 'rgba(150,150,150,0.1)' }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
-                <Bar dataKey="sales" name="Units Sold" fill="var(--theme-primary)" radius={[0, 4, 4, 0]} barSize={20} />
+                <Bar dataKey="value" name="Units Sold" fill="var(--theme-primary)" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -130,25 +157,34 @@ export default function DashboardOverviewPage() {
               </tr>
             </thead>
             <tbody>
-              {mockRecentOrders.map((order, i) => (
-                <tr key={order.id} className="border-b border-outline-variant/20 hover:bg-surface-container-lowest transition-colors">
-                  <td className="p-4 text-body-md font-medium text-on-surface">#{order.id.split("_")[1]}</td>
-                  <td className="p-4 text-body-md text-on-surface-variant">{order.table}</td>
-                  <td className="p-4 text-body-md text-on-surface-variant">{order.items} items</td>
-                  <td className="p-4 text-body-md font-semibold text-on-surface">${order.total.toFixed(2)}</td>
-                  <td className="p-4 text-body-md text-on-surface-variant">{order.time}</td>
-                  <td className="p-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold
-                      ${order.status === 'PENDING' ? 'bg-orange-100 text-orange-800' : ''}
-                      ${order.status === 'PREPARING' ? 'bg-blue-100 text-blue-800' : ''}
-                      ${order.status === 'READY' ? 'bg-green-100 text-green-800' : ''}
-                      ${order.status === 'COMPLETED' ? 'bg-gray-100 text-gray-800' : ''}
-                    `}>
-                      {order.status}
-                    </span>
-                  </td>
+              {recentOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-4 text-center text-on-surface-variant">No recent orders found.</td>
                 </tr>
-              ))}
+              ) : (
+                recentOrders.map((order) => (
+                  <tr key={order.id} className="border-b border-outline-variant/20 hover:bg-surface-container-lowest transition-colors">
+                    <td className="p-4 text-body-md font-medium text-on-surface">#{order.id.slice(-6)}</td>
+                    <td className="p-4 text-body-md text-on-surface-variant">{order.table?.number ? `T-${order.table.number}` : "Takeaway"}</td>
+                    <td className="p-4 text-body-md text-on-surface-variant">{order.items?.length || 0} items</td>
+                    <td className="p-4 text-body-md font-semibold text-on-surface">${order.totalAmount.toFixed(2)}</td>
+                    <td className="p-4 text-body-md text-on-surface-variant">
+                      {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="p-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold
+                        ${order.status === 'PENDING' ? 'bg-orange-100 text-orange-800' : ''}
+                        ${order.status === 'PREPARING' ? 'bg-blue-100 text-blue-800' : ''}
+                        ${order.status === 'READY' ? 'bg-green-100 text-green-800' : ''}
+                        ${order.status === 'PAID' || order.status === 'COMPLETED' ? 'bg-gray-100 text-gray-800' : ''}
+                        ${order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' : ''}
+                      `}>
+                        {order.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
