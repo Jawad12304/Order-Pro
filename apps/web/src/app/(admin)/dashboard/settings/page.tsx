@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { User, Image as ImageIcon, Check, Loader2, Save, Upload, X, Download, CloudOff } from "lucide-react";
-import { getAdminProfile, updateAdminProfile, changeAdminPassword, generateLocalBackup } from "@/app/actions/restaurant-settings";
+import { User, Image as ImageIcon, Check, Loader2, Save, Upload, X, Download, CloudOff, Store } from "lucide-react";
+import { getAdminProfile, updateAdminProfile, changeAdminPassword, generateLocalBackup, updateRestaurantName } from "@/app/actions/restaurant-settings";
 import { apiGetMe } from "@/lib/api";
 import Cropper from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
@@ -38,6 +38,13 @@ export default function AdminSettingsPage() {
   // Backup states
   const [backupLoading, setBackupLoading] = useState(false);
 
+  // Restaurant states
+  const [restaurantName, setRestaurantName] = useState("");
+  const [newRestaurantName, setNewRestaurantName] = useState("");
+  const [restLoading, setRestLoading] = useState(false);
+  const [restSuccessMsg, setRestSuccessMsg] = useState("");
+  const [restErrorMsg, setRestErrorMsg] = useState("");
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -49,6 +56,8 @@ export default function AdminSettingsPage() {
         const res = await getAdminProfile(me.username);
         if (res) {
           setRestaurantId(res.restaurantId || "");
+          setRestaurantName(res.restaurant?.name || "");
+          setNewRestaurantName(res.restaurant?.name || "");
           setFormData({
             newUsername: res.username || "",
             avatarUrl: res.avatarUrl || ""
@@ -103,12 +112,62 @@ export default function AdminSettingsPage() {
       if (res.success) {
         setSuccessMsg("Profile updated successfully!");
         setUsername(formData.newUsername);
+
+        // Notify layout to refresh header
+        const stored = localStorage.getItem("order-pro-auth");
+        if (stored) {
+          try {
+            const authData = JSON.parse(stored);
+            authData.username = formData.newUsername;
+            authData.displayName = formData.newUsername;
+            authData.avatarUrl = formData.avatarUrl;
+            localStorage.setItem("order-pro-auth", JSON.stringify(authData));
+          } catch {}
+        }
+        window.dispatchEvent(new Event("auth-update"));
+
         setTimeout(() => setSuccessMsg(""), 3000);
       }
     } catch (err) {
       console.error(err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRestaurantSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!restaurantId) return;
+
+    setRestLoading(true);
+    setRestSuccessMsg("");
+    setRestErrorMsg("");
+
+    try {
+      const res = await updateRestaurantName(restaurantId, newRestaurantName);
+      if (res.success) {
+        setRestSuccessMsg("Restaurant name updated successfully!");
+        setRestaurantName(newRestaurantName);
+
+        // Notify layout to refresh header
+        const stored = localStorage.getItem("order-pro-auth");
+        if (stored) {
+          try {
+            const authData = JSON.parse(stored);
+            authData.restaurantName = newRestaurantName;
+            localStorage.setItem("order-pro-auth", JSON.stringify(authData));
+          } catch {}
+        }
+        window.dispatchEvent(new Event("auth-update"));
+
+        setTimeout(() => setRestSuccessMsg(""), 3000);
+      } else {
+        setRestErrorMsg(res.error || "Failed to update restaurant name.");
+      }
+    } catch (err: any) {
+      setRestErrorMsg("An unexpected error occurred.");
+    } finally {
+      setRestLoading(false);
     }
   };
 
@@ -256,6 +315,42 @@ export default function AdminSettingsPage() {
                 >
                   {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                   Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Restaurant Settings Form */}
+          <div className="bg-surface rounded-3xl p-6 md:p-8 shadow-sm border border-outline-variant/30">
+            <h2 className="text-title-lg font-bold text-on-surface mb-2 flex items-center gap-2">
+              <Store className="text-primary" /> Restaurant Information
+            </h2>
+            <p className="text-body-sm text-on-surface-variant mb-6">Update your restaurant public profile details.</p>
+            
+            <form onSubmit={handleRestaurantSubmit} className="space-y-4">
+              <div>
+                <label className="block text-label-sm font-bold text-on-surface-variant mb-1.5">Restaurant Name</label>
+                <input
+                  required
+                  type="text"
+                  value={newRestaurantName}
+                  onChange={e => setNewRestaurantName(e.target.value)}
+                  className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-xl py-2.5 px-4 text-body-md focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+              
+              {restErrorMsg && <p className="text-label-sm text-error">{restErrorMsg}</p>}
+              {restSuccessMsg && <p className="text-label-md text-green-600 flex items-center gap-1"><Check size={16}/> {restSuccessMsg}</p>}
+              
+              <div className="pt-4 border-t border-outline-variant/20 flex items-center justify-between">
+                <div></div>
+                <button
+                  type="submit"
+                  disabled={restLoading}
+                  className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-medium text-label-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+                >
+                  {restLoading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                  Save Restaurant Name
                 </button>
               </div>
             </form>

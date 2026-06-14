@@ -7,6 +7,7 @@ import { LayoutDashboard, Menu as MenuIcon, UtensilsCrossed, QrCode, ClipboardLi
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { SocketProvider } from "@/context/SocketContext";
 import { apiLogout, apiGetMe } from "@/lib/api";
+import { getAdminProfile } from "@/app/actions/restaurant-settings";
 
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
@@ -22,6 +23,8 @@ interface AuthData {
   username: string;
   role: string;
   displayName: string;
+  avatarUrl?: string;
+  restaurantName?: string;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -35,36 +38,57 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     async function resolveAuth() {
       // 1. Try localStorage first (fast path)
       const stored = localStorage.getItem("order-pro-auth");
+      let currentAuth: AuthData | null = null;
       if (stored) {
         try {
-          setAuth(JSON.parse(stored));
+          currentAuth = JSON.parse(stored);
+          setAuth(currentAuth);
           setLoading(false);
-          return;
         } catch {
-          // corrupted — fall through to API
+          // corrupted
         }
       }
 
-      // 2. Fallback: ask the API using the httpOnly cookie
+      // 2. Fetch the latest profile data from the database asynchronously to refresh
       try {
         const me = await apiGetMe();
         if (me) {
-          const authData: AuthData = {
+          const profile = await getAdminProfile(me.username);
+          const updatedAuth: AuthData = {
             username: me.username,
             role: me.role,
             displayName: me.username,
+            avatarUrl: profile?.avatarUrl || "",
+            restaurantName: (profile as any)?.restaurant?.name || "",
           };
-          localStorage.setItem("order-pro-auth", JSON.stringify(authData));
-          setAuth(authData);
+
+          // Save/update only if values have changed
+          if (!currentAuth || 
+              currentAuth.username !== updatedAuth.username || 
+              currentAuth.role !== updatedAuth.role ||
+              currentAuth.avatarUrl !== updatedAuth.avatarUrl ||
+              currentAuth.restaurantName !== updatedAuth.restaurantName) {
+            localStorage.setItem("order-pro-auth", JSON.stringify(updatedAuth));
+            setAuth(updatedAuth);
+          }
           setLoading(false);
           return;
         }
-      } catch {}
+      } catch (err) {
+        console.error("Failed to load user profile in layout:", err);
+      }
 
-      // 3. Not authenticated at all — redirect to login
-      router.push("/");
+      // 3. If API auth check failed and we have no stored auth, redirect to login
+      if (!currentAuth) {
+        router.push("/");
+      }
     }
     resolveAuth();
+
+    window.addEventListener("auth-update", resolveAuth);
+    return () => {
+      window.removeEventListener("auth-update", resolveAuth);
+    };
   }, [router]);
 
   const handleLogout = async () => {
@@ -169,7 +193,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Main Content */}
           <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
             {/* Top Header */}
-            <header className="h-16 shrink-0 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
+            <header className="relative h-16 shrink-0 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setIsMobileMenuOpen(true)}
@@ -183,6 +207,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </h2>
               </div>
 
+              {/* Centered Restaurant Name */}
+              {auth.restaurantName && (
+                <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
+                  <span className="text-title-md sm:text-title-lg font-extrabold text-primary tracking-tight truncate max-w-[150px] sm:max-w-[300px]">
+                    {auth.restaurantName}
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center gap-4">
                 <ThemeToggle />
                 <div className="w-px h-8 bg-outline-variant/50 hidden sm:block"></div>
@@ -191,8 +224,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <p className="text-label-lg font-semibold text-on-surface">{auth.displayName}</p>
                     <p className="text-label-sm text-on-surface-variant capitalize">{auth.role}</p>
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center text-primary font-bold shadow-inner">
-                    {auth.displayName.charAt(0).toUpperCase()}
+                  <div className="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center text-primary font-bold shadow-inner overflow-hidden">
+                    {auth.avatarUrl ? (
+                      <img src={auth.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      auth.displayName.charAt(0).toUpperCase()
+                    )}
                   </div>
                 </div>
               </div>

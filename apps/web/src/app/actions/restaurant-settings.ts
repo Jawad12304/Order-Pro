@@ -10,7 +10,17 @@ export async function getAdminProfile(username: string) {
   try {
     const user = await prisma.user.findFirst({
       where: { username: { equals: username, mode: "insensitive" } },
-      select: { username: true, avatarUrl: true, restaurantId: true, role: true }
+      select: {
+        username: true,
+        avatarUrl: true,
+        restaurantId: true,
+        role: true,
+        restaurant: {
+          select: {
+            name: true
+          }
+        }
+      }
     });
     return user;
   } catch (error) {
@@ -82,6 +92,26 @@ export async function generateLocalBackup(restaurantId: string) {
     };
   } catch (error: any) {
     console.error("Failed to generate backup:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateRestaurantName(restaurantId: string, name: string) {
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId }
+    });
+    if (!restaurant) throw new Error("Restaurant not found");
+
+    await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: { name: name.trim() }
+    });
+
+    revalidatePath("/dashboard/settings");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Failed to update restaurant name:", error);
     return { success: false, error: error.message };
   }
 }
