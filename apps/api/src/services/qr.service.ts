@@ -50,7 +50,7 @@ export class QrService {
       try {
         // Fetch the logo image
         const logoResponse = await fetch(logoUrl);
-        const logoArrayBuffer = await logoResponse.arrayBuffer();
+        const logoArrayBuffer = await (logoResponse as any).arrayBuffer();
         const logoBuffer = Buffer.from(logoArrayBuffer);
 
         // Resize logo to 20% of QR code width (200px)
