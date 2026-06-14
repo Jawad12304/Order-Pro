@@ -31,7 +31,7 @@ export default async function CustomerLayout({ children }: { children: React.Rea
         where: { restaurantId: restaurant.id },
         select: { id: true, number: true },
       });
-      tablesMap = Object.fromEntries(tables.map(t => [t.number, t.id]));
+      tablesMap = Object.fromEntries(tables.map((t: any) => [t.number, t.id]));
     }
   } catch (error) {
     console.error("Failed to load restaurant theme", error);
