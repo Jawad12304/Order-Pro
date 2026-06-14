@@ -151,7 +151,7 @@ export default function OrderHistoryPage() {
                         
                         <div className="mb-5 bg-surface-container-lowest/50 rounded-xl p-3 border border-outline-variant/10">
                           <p className="text-body-sm text-on-surface line-clamp-2 leading-relaxed">
-                            {order.items.map(i => `<span class="font-medium">${i.quantity}x</span> ${i.menuItem?.name || "Item"}`).join(" • ").replace(/<[^>]*>?/gm, '')}
+                            {order.items.map((i: any) => `<span class="font-medium">${i.quantity}x</span> ${i.menuItem?.name || "Item"}`).join(" • ").replace(/<[^>]*>?/gm, '')}
                           </p>
                         </div>
 
