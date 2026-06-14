@@ -4,11 +4,14 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Store, CreditCard, ToggleRight, Settings, LogOut, Menu, X } from "lucide-react";
+import { apiLogout, apiGetMe } from "@/lib/api";
+import { getSuperAdminProfile } from "@/app/actions/settings";
 
 interface AuthData {
   username: string;
   role: string;
   displayName: string;
+  avatarUrl?: string | null;
 }
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -19,31 +22,70 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const router = useRouter();
 
   useEffect(() => {
-    const stored = localStorage.getItem("order-pro-auth");
-    if (stored) {
+    async function resolveAuth() {
+      // 1. Try localStorage first (fast path)
+      const stored = localStorage.getItem("order-pro-auth");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.role === "SUPER_ADMIN") {
+            setAuth(parsed);
+            setLoading(false);
+            return;
+          } else {
+            router.push("/dashboard");
+            return;
+          }
+        } catch {
+          // corrupted — fall through to API
+        }
+      }
+
+      // 2. Fallback: ask the API using the httpOnly cookie
       try {
-        const parsed = JSON.parse(stored);
-        if (parsed.role === "superadmin") {
-          setAuth(parsed);
-        } else {
-          router.push("/dashboard");
+        const me = await apiGetMe();
+        if (me) {
+          if (me.role !== "SUPER_ADMIN") {
+            router.push("/dashboard");
+            return;
+          }
+          
+          // Fetch additional profile data from the DB via server action
+          let displayName = me.username;
+          let avatarUrl = null;
+          try {
+            const profileRes = await getSuperAdminProfile(me.username);
+            if (profileRes.success && profileRes.user) {
+              displayName = profileRes.user.displayName || me.username;
+              avatarUrl = profileRes.user.avatarUrl;
+            }
+          } catch (e) {
+            console.error(e);
+          }
+
+          const authData: AuthData = {
+            username: me.username,
+            role: me.role,
+            displayName,
+            avatarUrl,
+          };
+          localStorage.setItem("order-pro-auth", JSON.stringify(authData));
+          setAuth(authData);
+          setLoading(false);
           return;
         }
-      } catch {
-        router.push("/login");
-        return;
-      }
-    } else {
-      router.push("/login");
-      return;
+      } catch {}
+
+      // 3. Not authenticated — redirect to login
+      router.push("/");
     }
-    setLoading(false);
+    resolveAuth();
   }, [router]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await apiLogout(); } catch {}
     localStorage.removeItem("order-pro-auth");
-    document.cookie = "order-pro-auth=; path=/; max-age=0";
-    router.push("/login");
+    router.push("/");
   };
 
   if (loading) {
@@ -99,7 +141,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           className="flex items-center gap-3 px-4 py-3 rounded-xl text-body-md font-medium hover:bg-surface-variant transition-colors text-on-surface-variant"
         >
           <Settings size={20} />
-          Platform Settings
+          Settings
         </Link>
         <button
           onClick={handleLogout}
@@ -147,12 +189,16 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             </button>
             <h2 className="text-title-md font-bold">God Mode</h2>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-sm">
-              SA
-            </div>
+          <Link href="/superadmin/settings" className="flex items-center gap-3 hover:bg-surface-variant p-1.5 rounded-xl transition-colors cursor-pointer">
+            {auth.avatarUrl ? (
+              <img src={auth.avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-outline-variant/30" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-sm">
+                SA
+              </div>
+            )}
             <span className="text-label-sm font-bold hidden sm:block">{auth.displayName}</span>
-          </div>
+          </Link>
         </header>
         
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">

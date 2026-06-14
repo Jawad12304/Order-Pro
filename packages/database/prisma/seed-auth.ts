@@ -75,6 +75,45 @@ async function main() {
   });
 
   // ==========================================
+  // 1.5. SUBSCRIPTION PLANS
+  // ==========================================
+  const defaultPlans = [
+    { name: "Free Tier", price: "$0", tablesLimit: 3, ordersLimit: -1, targetAudience: "Hobbyists & Food Trucks", isPopular: false, features: ["3 Tables max", "Unlimited Orders"] },
+    { name: "Starter", price: "$29", tablesLimit: 15, ordersLimit: -1, targetAudience: "Small Cafes", isPopular: false, features: ["15 Tables max", "Unlimited Orders", "Advanced Analytics"] },
+    { name: "Pro", price: "$79", tablesLimit: 50, ordersLimit: -1, targetAudience: "Busy Restaurants", isPopular: true, badgeText: "Most Popular", badgeColor: "#8B5CF6", features: ["50 Tables max", "Unlimited Orders", "Advanced Analytics"] },
+    { name: "Enterprise", price: "Custom", tablesLimit: -1, ordersLimit: -1, targetAudience: "Multi-location Brands", isPopular: false, features: ["Unlimited Tables", "Unlimited Orders", "Advanced Analytics"] },
+  ];
+
+  const createdPlans = [];
+  for (const plan of defaultPlans) {
+    const p = await prisma.subscriptionPlan.upsert({
+      where: { name: plan.name },
+      update: plan,
+      create: plan,
+    });
+    createdPlans.push(p);
+  }
+  const freePlan = createdPlans.find(p => p.name === "Free Tier");
+
+  // ==========================================
+  // 1.75. FEATURE FLAGS
+  // ==========================================
+  const defaultFlags = [
+    { key: "analytics", name: "Analytics Hub", description: "Access to advanced dashboard analytics.", defaultValue: false },
+    { key: "inventory", name: "Inventory Management", description: "Track stock levels and ingredients.", defaultValue: false },
+    { key: "whatsapp", name: "WhatsApp Integration", description: "Send order receipts via WhatsApp.", defaultValue: false },
+    { key: "custom_domain", name: "Custom Domain", description: "White-label the QR menu with a custom URL.", defaultValue: false },
+  ];
+
+  for (const flag of defaultFlags) {
+    await prisma.featureFlag.upsert({
+      where: { key: flag.key },
+      update: flag,
+      create: flag,
+    });
+  }
+
+  // ==========================================
   // 2. SAMPLE RESTAURANTS
   // ==========================================
   const restaurantSeed = [
@@ -91,7 +130,7 @@ async function main() {
         slug: r.slug,
         themeColor: "#E8501A",
         currency: "USD",
-        subscriptionPlan: "FREE",
+        subscriptionPlanId: freePlan?.id,
         isActive: true,
       },
     });

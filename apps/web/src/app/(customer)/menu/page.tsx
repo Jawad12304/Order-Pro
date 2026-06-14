@@ -18,24 +18,34 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
   const headersList = await headers();
   const host = headersList.get("host") || "";
   const subdomain = host.split(".")[0];
-  const { table, token } = await searchParams;
+  const { table, token, restaurantId: queryRestaurantId } = await searchParams;
 
   // We should save the table and token in context (client-side) later.
   // For now, let's fetch the menu.
   
-  const restaurant = await prisma.restaurant.findUnique({
-    where: { slug: subdomain },
-    include: {
-      categories: {
-        where: { isVisible: true },
-        orderBy: { sortOrder: "asc" },
+  let restaurant = null;
+  
+  // First try to find by ID if provided (for Preview button)
+  if (queryRestaurantId && typeof queryRestaurantId === "string") {
+    restaurant = await prisma.restaurant.findUnique({
+      where: { id: queryRestaurantId },
+      include: {
+        categories: { where: { isVisible: true }, orderBy: { sortOrder: "asc" } },
+        menuItems: { where: { isAvailable: true }, orderBy: { sortOrder: "asc" } },
       },
-      menuItems: {
-        where: { isAvailable: true },
-        orderBy: { sortOrder: "asc" },
+    });
+  }
+  
+  // Fallback to subdomain matching
+  if (!restaurant) {
+    restaurant = await prisma.restaurant.findUnique({
+      where: { slug: subdomain },
+      include: {
+        categories: { where: { isVisible: true }, orderBy: { sortOrder: "asc" } },
+        menuItems: { where: { isAvailable: true }, orderBy: { sortOrder: "asc" } },
       },
-    },
-  });
+    });
+  }
 
   if (!restaurant) {
     return <div className="p-8 text-center">Restaurant not found</div>;

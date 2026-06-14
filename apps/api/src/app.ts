@@ -13,16 +13,29 @@ const app = express();
 // 1. Helmet (Security Headers)
 app.use(helmet());
 
-// 2. CORS (Allowlist)
-const allowlist = ["http://localhost:3000", "https://orderpro.app", "https://*.orderpro.app"];
+// 2. CORS (Allowlist with proper wildcard support)
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://orderpro.app",
+];
+const allowedOriginPatterns = [
+  /^https:\/\/.*\.orderpro\.app$/,
+];
+
+function isOriginAllowed(origin: string | undefined): boolean {
+  if (!origin) return false;
+  if (allowedOrigins.includes(origin)) return true;
+  return allowedOriginPatterns.some((pattern) => pattern.test(origin));
+}
+
 const corsOptionsDelegate = function (req: any, callback: any) {
-  let corsOptions;
-  if (allowlist.indexOf(req.header("Origin")) !== -1) {
-    corsOptions = { origin: true, credentials: true };
+  const origin = req.header("Origin");
+  if (isOriginAllowed(origin)) {
+    callback(null, { origin: true, credentials: true });
   } else {
-    corsOptions = { origin: false };
+    callback(null, { origin: false });
   }
-  callback(null, corsOptions);
 };
 app.use(cors(corsOptionsDelegate));
 

@@ -1,18 +1,20 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Utensils, Search, ShoppingCart, Receipt } from "lucide-react";
 
-export default function BottomNavigation() {
+function BottomNavContent() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryString = searchParams.toString() ? `?${searchParams.toString()}` : "";
 
   const navItems = [
-    { label: "Menu", href: "/menu", icon: Utensils },
-    { label: "Search", href: "/menu/search", icon: Search },
-    { label: "Cart", href: "/cart", icon: ShoppingCart },
-    { label: "Orders", href: "/order/history", icon: Receipt },
+    { label: "Menu", href: `/menu${queryString}`, icon: Utensils },
+    { label: "Search", href: `/menu/search${queryString}`, icon: Search },
+    { label: "Cart", href: `/cart${queryString}`, icon: ShoppingCart },
+    { label: "Orders", href: `/order/history${queryString}`, icon: Receipt },
   ];
 
   return (
@@ -46,5 +48,13 @@ export default function BottomNavigation() {
         );
       })}
     </nav>
+  );
+}
+
+export default function BottomNavigation() {
+  return (
+    <Suspense fallback={null}>
+      <BottomNavContent />
+    </Suspense>
   );
 }

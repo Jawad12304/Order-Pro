@@ -6,6 +6,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Menu as MenuIcon, UtensilsCrossed, QrCode, ClipboardList, Settings, LogOut, X, BarChart3 } from "lucide-react";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { SocketProvider } from "@/context/SocketContext";
+import { apiLogout, apiGetMe } from "@/lib/api";
+
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -29,26 +32,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem("order-pro-auth");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setAuth(parsed);
-      } catch {
-        router.push("/login");
-        return;
+    async function resolveAuth() {
+      // 1. Try localStorage first (fast path)
+      const stored = localStorage.getItem("order-pro-auth");
+      if (stored) {
+        try {
+          setAuth(JSON.parse(stored));
+          setLoading(false);
+          return;
+        } catch {
+          // corrupted — fall through to API
+        }
       }
-    } else {
-      router.push("/login");
-      return;
+
+      // 2. Fallback: ask the API using the httpOnly cookie
+      try {
+        const me = await apiGetMe();
+        if (me) {
+          const authData: AuthData = {
+            username: me.username,
+            role: me.role,
+            displayName: me.username,
+          };
+          localStorage.setItem("order-pro-auth", JSON.stringify(authData));
+          setAuth(authData);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+
+      // 3. Not authenticated at all — redirect to login
+      router.push("/");
     }
-    setLoading(false);
+    resolveAuth();
   }, [router]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await apiLogout(); } catch {}
     localStorage.removeItem("order-pro-auth");
-    document.cookie = "order-pro-auth=; path=/; max-age=0";
-    router.push("/login");
+    router.push("/");
   };
 
   if (loading) {
@@ -72,7 +94,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <nav className="flex-1 space-y-2">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = item.href === "/dashboard" 
+            ? pathname === "/dashboard" 
+            : (pathname === item.href || pathname.startsWith(`${item.href}/`));
           const Icon = item.icon;
           return (
             <Link
@@ -93,7 +117,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       <div className="mt-auto border-t border-outline-variant/30 pt-4 space-y-2">
-        <Link href="/dashboard/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-on-surface-variant hover:bg-surface-variant text-body-md font-medium">
+        <Link 
+          href="/dashboard/settings" 
+          onClick={() => setIsMobileMenuOpen(false)} 
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-body-md ${
+            pathname === "/dashboard/settings" || pathname.startsWith("/dashboard/settings/")
+              ? "bg-primary text-on-primary shadow-sm"
+              : "text-on-surface hover:bg-surface-variant hover:text-on-surface"
+          }`}
+        >
           <Settings size={20} />
           Settings
         </Link>
@@ -137,7 +169,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Main Content */}
           <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
             {/* Top Header */}
-            <header className="h-16 shrink-0 bg-surface border-b border-outline-variant/30 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
+            <header className="h-16 shrink-0 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setIsMobileMenuOpen(true)}
@@ -152,6 +184,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
 
               <div className="flex items-center gap-4">
+                <ThemeToggle />
+                <div className="w-px h-8 bg-outline-variant/50 hidden sm:block"></div>
                 <div className="flex items-center gap-3">
                   <div className="text-right hidden sm:block">
                     <p className="text-label-lg font-semibold text-on-surface">{auth.displayName}</p>

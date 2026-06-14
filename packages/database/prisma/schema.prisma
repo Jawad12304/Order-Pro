@@ -16,14 +16,32 @@ generator client {
 // ==========================================
 // ENUMS
 // ==========================================
+model SubscriptionPlan {
+  id             String       @id @default(cuid())
+  name           String       @unique
+  price          String
+  tablesLimit    Int          // -1 means unlimited
+  ordersLimit    Int          // -1 means unlimited
+  targetAudience String
+  isPopular      Boolean      @default(false)
+  badgeText      String?
+  badgeColor     String?
+  features       String[]     // PostgreSQL array of text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-enum SubscriptionPlan {
-  FREE
-  STARTER
-  PRO
-  ENTERPRISE
+  restaurants    Restaurant[]
 }
 
+model FeatureFlag {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  name         String
+  description  String?
+  defaultValue Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
 enum TableStatus {
   AVAILABLE
   OCCUPIED
@@ -87,8 +105,9 @@ model Restaurant {
   logoUrl          String?
   themeColor       String?          @default("#F97316") // Orange-500
   currency         String           @default("USD")
-  settingsJson     Json?            // Flexible config: tax rate, service charge, operating hours, etc.
-  subscriptionPlan SubscriptionPlan @default(FREE)
+  settingsJson       Json?            // Flexible config: tax rate, service charge, operating hours, etc.
+  subscriptionPlanId String?
+  subscriptionPlan   SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id], onDelete: SetNull)
   isActive         Boolean          @default(true)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
@@ -105,7 +124,7 @@ model Restaurant {
   users          User[]
 
   @@index([isActive])
-  @@index([subscriptionPlan])
+  @@index([subscriptionPlanId])
 }
 
 // ==========================================
@@ -381,6 +400,8 @@ model User {
   id            String      @id @default(cuid())
   username      String      // Login identifier (unique within a restaurant)
   email         String?     @unique
+  displayName   String?     @map("display_name")
+  avatarUrl     String?     @map("avatar_url")
   passwordHash  String      @map("password_hash") // bcrypt hash
   role          UserRole
   restaurantId  String?     @map("restaurant_id") // NULL for SUPER_ADMIN only

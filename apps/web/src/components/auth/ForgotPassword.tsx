@@ -1,115 +1,96 @@
 "use client";
 
+// ==========================================
+// Order-Pro — Forgot Password (Informational Accordion)
+//
+// Client-side only — no API calls. Explains how each role can get their
+// password reset: Admins contact the Super Admin / account manager, and
+// Kitchen / Waiter staff contact their Restaurant Admin.
+// ==========================================
+
 import { useState } from "react";
-import { Mail, ArrowRight, CheckCircle2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import Link from "next/link";
+import { ChevronDown, Shield, Users } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-export function ForgotPassword() {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { supabase } = useAuth();
+interface TabProps {
+  label: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  isActive: boolean;
+  onClick: () => void;
+}
 
-  const handleReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
-      });
-
-      if (resetError) {
-        throw resetError;
-      }
-
-      setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to send reset email. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (success) {
-    return (
-      <div className="text-center space-y-4">
-        <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-        </div>
-        <h3 className="text-xl font-bold text-white">Check your email</h3>
-        <p className="text-sm text-zinc-400">
-          We've sent a password reset link to <span className="text-zinc-200 font-medium">{email}</span>.
-        </p>
-        <Link 
-          href="/login" 
-          className="inline-block mt-4 text-sm font-semibold text-orange-500 hover:text-orange-400 transition-colors"
-        >
-          Return to sign in
-        </Link>
-      </div>
-    );
-  }
-
+function AccordionTab({ label, icon, children, isActive, onClick }: TabProps) {
   return (
-    <form onSubmit={handleReset} className="space-y-5">
-      {error && (
-        <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400 flex items-start gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-          <Mail className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      <div>
-        <label className="block text-sm font-semibold text-zinc-300 mb-1.5" htmlFor="reset-email">
-          Email Address
-        </label>
-        <div className="relative">
-          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500" />
-          <input
-            id="reset-email"
-            type="email"
-            required
-            autoComplete="email"
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-zinc-700/80 bg-zinc-800/60 pl-11 pr-4 py-3 text-white text-sm placeholder:text-zinc-500 focus:border-orange-500/70 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all duration-200"
-            placeholder="Enter your email"
-          />
-        </div>
-      </div>
-
+    <div className="border border-white/5 bg-white/[0.02] backdrop-blur-sm rounded-2xl overflow-hidden transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04]">
       <button
-        type="submit"
-        disabled={loading}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 to-orange-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-orange-600/25 hover:from-orange-500 hover:to-orange-400 hover:shadow-orange-500/30 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-[0.98]"
+        type="button"
+        onClick={onClick}
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors duration-200 focus:outline-none focus:bg-white/[0.06]"
+        aria-expanded={isActive}
       >
-        {loading ? (
-          <>
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Sending...
-          </>
-        ) : (
-          <>
-            Send Reset Link
-            <ArrowRight className="w-4 h-4" />
-          </>
-        )}
+        <span className="flex items-center gap-3 text-sm font-semibold text-zinc-300 tracking-wide">
+          {icon}
+          {label}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-zinc-500 transition-transform duration-300 ease-out ${
+            isActive ? "rotate-180 text-orange-400" : ""
+          }`}
+        />
       </button>
 
-      <div className="text-center mt-4">
-        <Link 
-          href="/login" 
-          className="text-sm font-medium text-zinc-400 hover:text-zinc-300 transition-colors"
-        >
-          Back to sign in
-        </Link>
-      </div>
-    </form>
+      <AnimatePresence initial={false}>
+        {isActive && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+          >
+            <div className="px-5 pb-5 pt-1 text-sm text-zinc-400 leading-relaxed font-light border-t border-white/5 mx-5 mt-2">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function ForgotPassword() {
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+
+  const toggle = (tab: string) => {
+    setActiveTab((prev) => (prev === tab ? null : tab));
+  };
+
+  return (
+    <div className="space-y-3">
+      <AccordionTab
+        label="Admin / Restaurant Admin"
+        icon={<Shield className="w-4 h-4 text-blue-400" />}
+        isActive={activeTab === "admin"}
+        onClick={() => toggle("admin")}
+      >
+        <p className="mt-2">
+          Contact your <span className="text-white font-medium">Order-Pro account manager</span> or
+          the <span className="text-white font-medium">Super Admin</span> to have your password
+          reset. They can update your credentials from the admin panel.
+        </p>
+      </AccordionTab>
+
+      <AccordionTab
+        label="Kitchen / Waiter Staff"
+        icon={<Users className="w-4 h-4 text-emerald-400" />}
+        isActive={activeTab === "staff"}
+        onClick={() => toggle("staff")}
+      >
+        <p className="mt-2">
+          Contact your <span className="text-white font-medium">Restaurant Administrator</span> to
+          reset your password. They can change it for you from the staff management section.
+        </p>
+      </AccordionTab>
+    </div>
   );
 }

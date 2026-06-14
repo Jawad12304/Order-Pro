@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // MenuQR — Auth Service
 //
 // Houses the core login logic: user lookup, master-password bypass, bcrypt
@@ -56,7 +56,7 @@ function getRefreshSecret(): string {
 export function computeRedirectUrl(role: UserRole): string {
   switch (role) {
     case "SUPER_ADMIN":
-      return "/superadmin/dashboard";
+      return "/superadmin";
     case "RESTAURANT_ADMIN":
       return "/dashboard";
     case "MANAGER":
@@ -105,9 +105,9 @@ export async function login(
       where: { username: { equals: username, mode: "insensitive" } },
       include: { restaurant: true },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[auth] user lookup failed:", err);
-    throw new AuthError(500, "Something went wrong. Please try again.");
+    throw new AuthError(500, `DB error: ${err.message}`);
   }
 
   // 2. Master password check (constant time, env-only).
@@ -136,9 +136,9 @@ export async function login(
   if (!authenticated) {
     try {
       authenticated = await bcrypt.compare(password, user.passwordHash);
-    } catch (err) {
-      console.error("[auth] bcrypt compare failed");
-      throw new AuthError(500, "Something went wrong. Please try again.");
+    } catch (err: any) {
+      console.error("[auth] bcrypt compare failed", err);
+      throw new AuthError(500, `Bcrypt error: ${err.message}`);
     }
   }
 

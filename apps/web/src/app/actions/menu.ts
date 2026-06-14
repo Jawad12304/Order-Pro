@@ -169,6 +169,42 @@ export async function createMenuItem(data: any) {
   }
 }
 
+export async function updateCategory(id: string, data: { name: string; description?: string; isVisible?: boolean }) {
+  try {
+    const category = await prisma.category.update({
+      where: { id },
+      data,
+    });
+    revalidatePath("/dashboard/menu");
+    return category;
+  } catch (error) {
+    console.error("Failed to update category:", error);
+    throw new Error("Failed to update category");
+  }
+}
+
+export async function deleteCategory(id: string) {
+  try {
+    // Check if there are any items in this category
+    const itemsCount = await prisma.menuItem.count({
+      where: { categoryId: id },
+    });
+
+    if (itemsCount > 0) {
+      return { success: false, error: "Cannot delete category because it contains menu items. Please move or delete the items first." };
+    }
+
+    await prisma.category.delete({
+      where: { id },
+    });
+    revalidatePath("/dashboard/menu");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete category:", error);
+    throw new Error("Failed to delete category");
+  }
+}
+
 export async function updateMenuItem(id: string, data: any) {
   try {
     const { restaurantId, modifierGroups, ...rest } = data;
@@ -177,6 +213,41 @@ export async function updateMenuItem(id: string, data: any) {
       where: { id },
       data: rest
     });
+
+    // Handle modifier groups update
+    if (modifierGroups) {
+      // First, delete existing links for this item
+      await prisma.menuItemModifierGroup.deleteMany({
+        where: { menuItemId: id }
+      });
+
+      // Then recreate them
+      for (const group of modifierGroups) {
+        // If it's a new group from the UI (has no db ID, or we just recreate)
+        const createdGroup = await prisma.modifierGroup.create({
+          data: {
+            restaurantId,
+            name: group.name,
+            minSelections: group.minSelections,
+            maxSelections: group.maxSelections,
+            modifiers: {
+              create: group.options.map((opt: any, index: number) => ({
+                name: opt.name,
+                priceDelta: opt.priceDelta,
+                sortOrder: index
+              }))
+            }
+          }
+        });
+
+        await prisma.menuItemModifierGroup.create({
+          data: {
+            menuItemId: menuItem.id,
+            modifierGroupId: createdGroup.id
+          }
+        });
+      }
+    }
 
     revalidatePath("/dashboard/menu");
     return menuItem;

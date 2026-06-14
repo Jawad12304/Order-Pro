@@ -27,7 +27,7 @@ export default function ItemCard({ item }: ItemCardProps) {
 
   return (
     <div className="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-lg transition-shadow border border-outline-variant/10 flex flex-col h-full">
-      <div className="relative aspect-[4/3] overflow-hidden bg-surface-container-high">
+      <div className="relative aspect-square overflow-hidden bg-surface-container-high">
         {item.imageUrl ? (
           <Image
             src={item.imageUrl}

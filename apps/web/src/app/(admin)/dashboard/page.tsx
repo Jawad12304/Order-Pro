@@ -22,15 +22,18 @@ const Legend = dynamic(() => import("recharts").then((mod) => mod.Legend), { ssr
 
 function KpiCard({ title, value, icon: Icon, trend }: { title: string, value: string | number, icon: any, trend?: string }) {
   return (
-    <div className="bg-surface p-6 rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col gap-2">
-      <div className="flex justify-between items-center text-on-surface-variant">
-        <span className="text-label-lg font-medium">{title}</span>
-        <Icon size={20} className="text-primary" />
+    <div className="relative overflow-hidden bg-surface-container-lowest/80 backdrop-blur-xl p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-outline-variant/30 flex flex-col gap-2 group hover:border-primary/30 transition-all duration-300">
+      <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors duration-500" />
+      <div className="flex justify-between items-center text-on-surface-variant z-10">
+        <span className="text-label-lg font-bold tracking-wide uppercase">{title}</span>
+        <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
+          <Icon size={22} className="drop-shadow-sm" />
+        </div>
       </div>
-      <div className="flex items-end gap-3 mt-2">
-        <span className="text-headline-lg font-bold text-on-surface">{value}</span>
+      <div className="flex items-end gap-3 mt-3 z-10">
+        <span className="text-[2.5rem] leading-none font-black text-on-surface tracking-tight">{value}</span>
         {trend && (
-          <span className={`text-label-md font-semibold mb-1 ${trend.startsWith("+") ? "text-green-600" : "text-error"}`}>
+          <span className={`text-label-md font-bold mb-1.5 px-2 py-0.5 rounded-md ${trend.startsWith("+") ? "bg-green-500/10 text-green-500" : "bg-error/10 text-error"}`}>
             {trend}
           </span>
         )}
@@ -95,39 +98,42 @@ export default function DashboardOverviewPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Chart (Spans 2 columns on lg) */}
-        <div className="lg:col-span-2 bg-surface p-6 rounded-2xl shadow-sm border border-outline-variant/30">
-          <h3 className="text-title-lg font-bold text-on-surface mb-6">Revenue & Orders (Today)</h3>
-          <div className="h-[300px] w-full">
+        <div className="lg:col-span-2 relative overflow-hidden bg-surface-container-lowest/80 backdrop-blur-xl p-6 lg:p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-outline-variant/30">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50" />
+          <h3 className="text-title-xl font-black text-on-surface mb-8 relative z-10">Revenue & Orders (Today)</h3>
+          <div className="h-[300px] w-full relative z-10 text-gray-600 dark:text-gray-300">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={displayStats.hourlyData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.2)" />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: 'var(--theme-on-surface-variant)' }} dy={10} />
-                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: 'var(--theme-on-surface-variant)' }} dx={-10} />
-                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: 'var(--theme-on-surface-variant)' }} dx={10} />
+                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: 'currentColor' }} dy={10} />
+                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: 'currentColor' }} dx={-10} />
+                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: 'currentColor' }} dx={10} />
                 <RechartsTooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ borderRadius: '16px', border: '1px solid var(--theme-outline-variant)', backgroundColor: 'var(--theme-surface)', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', color: 'var(--theme-on-surface)' }}
                   labelStyle={{ fontWeight: 'bold', color: 'var(--theme-on-surface)' }}
                 />
                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                <Line yAxisId="left" type="monotone" name="Revenue ($)" dataKey="revenue" stroke="var(--theme-primary)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line yAxisId="right" type="monotone" name="Orders" dataKey="orders" stroke="var(--theme-secondary, #10b981)" strokeWidth={3} dot={{ r: 4 }} />
+                <Line yAxisId="left" type="monotone" name="Revenue ($)" dataKey="revenue" stroke="var(--theme-primary)" strokeWidth={4} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 8, strokeWidth: 0 }} />
+                <Line yAxisId="right" type="monotone" name="Orders" dataKey="orders" stroke="#10b981" strokeWidth={4} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 8, strokeWidth: 0 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Top Items Bar Chart */}
-        <div className="bg-surface p-6 rounded-2xl shadow-sm border border-outline-variant/30">
-          <h3 className="text-title-lg font-bold text-on-surface mb-6">Top Selling Items</h3>
-          <div className="h-[300px] w-full">
+        <div className="relative overflow-hidden bg-surface-container-lowest/80 backdrop-blur-xl p-6 lg:p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-outline-variant/30">
+          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-primary/5 opacity-50" />
+          <h3 className="text-title-xl font-black text-on-surface mb-8 relative z-10">Top Selling Items</h3>
+          <div className="h-[300px] w-full text-gray-600 dark:text-gray-300">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={displayStats.topItems} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(150,150,150,0.2)" />
                 <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} tick={{ fill: 'var(--theme-on-surface-variant)', fontSize: 12 }} />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} tick={{ fill: 'currentColor', fontSize: 12 }} />
                 <RechartsTooltip 
                   cursor={{ fill: 'rgba(150,150,150,0.1)' }}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', color: 'var(--theme-on-surface)' }}
+                  itemStyle={{ color: 'var(--theme-on-surface)' }}
                 />
                 <Bar dataKey="value" name="Units Sold" fill="var(--theme-primary)" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>

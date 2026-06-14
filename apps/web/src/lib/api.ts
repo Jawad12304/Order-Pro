@@ -1,31 +1,114 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+// ==========================================
+// MenuQR — API Client
+//
+// Axios instance configured to:
+//   1. Target the Express backend
+//   2. Send httpOnly cookies automatically (withCredentials)
+//   3. Provide consistent error unwrapping
+//   4. Return typed { success, data, error } envelopes
+// ==========================================
 
-interface FetchOptions extends RequestInit {
-  token?: string;
+import axios, { AxiosError } from "axios";
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+export const api = axios.create({
+  baseURL: API_BASE,
+  withCredentials: true, // sends mq_access_token + mq_refresh_token cookies
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// ==========================================
+// Standard API envelope
+// ==========================================
+
+export interface ApiEnvelope<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }
 
-export async function fetchApi<T>(
-  endpoint: string,
-  options: FetchOptions = {}
-): Promise<T> {
-  const { token, headers: customHeaders, ...restOptions } = options;
+// ==========================================
+// Auth-specific payload types
+// ==========================================
 
-  const headers = new Headers(customHeaders);
-  headers.set("Content-Type", "application/json");
+export type UserRole =
+  | "SUPER_ADMIN"
+  | "RESTAURANT_ADMIN"
+  | "MANAGER"
+  | "KITCHEN"
+  | "WAITER";
 
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
+export interface LoginResult {
+  role: UserRole;
+  redirect_url: string;
+  restaurant_name: string | null;
+  username: string;
+}
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    headers,
-    ...restOptions,
+export interface MeResult {
+  userId: string;
+  username: string;
+  role: UserRole;
+  restaurant_id: string | null;
+  restaurant_slug: string | null;
+  master_access: boolean;
+}
+
+// ==========================================
+// Auth API helpers
+// ==========================================
+
+export async function apiLogin(
+  username: string,
+  password: string
+): Promise<LoginResult> {
+  const res = await api.post<ApiEnvelope<LoginResult>>("/auth/login", {
+    username,
+    password,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `API Error: ${response.status} ${response.statusText}`);
+  const envelope = res.data;
+  if (!envelope.success || !envelope.data) {
+    throw new Error(envelope.error ?? "Login failed");
   }
+  return envelope.data;
+}
 
-  return response.json();
+export async function apiLogout(): Promise<void> {
+  await api.post("/auth/logout");
+}
+
+export async function apiGetMe(): Promise<MeResult | null> {
+  try {
+    const res = await api.get<ApiEnvelope<MeResult>>("/auth/me");
+    return res.data.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ==========================================
+// Generic error unwrapper for consumers
+// ==========================================
+
+export function getApiErrorMessage(err: unknown): string {
+  if (err instanceof AxiosError) {
+    // Network error (server unreachable, CORS blocked, etc.)
+    if (!err.response) {
+      return "Unable to reach the server. Make sure the API is running.";
+    }
+    const envelope = err.response?.data as ApiEnvelope | undefined;
+    if (envelope?.error) return envelope.error;
+    if (err.response?.status === 429) {
+      return "Too many login attempts. Try again in 15 minutes.";
+    }
+    if (err.response?.status === 403) {
+      return "Your account has been disabled. Contact your restaurant administrator.";
+    }
+  }
+  if (err instanceof Error) return err.message;
+  return "Something went wrong. Please try again.";
 }

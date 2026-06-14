@@ -3,64 +3,79 @@
 :root {
   --background: #fcf9f8;
   --foreground: #1c1b1b;
-  /* Dynamic Theme Variables */
   --theme-primary: #ab3500;
   --theme-on-primary: #ffffff;
   --theme-primary-container: #ff6b35;
   --theme-on-primary-container: #5f1900;
+  
+  --surface: #ffffff;
+  --surface-bright: #fcf9f8;
+  --surface-variant: #e5e2e1;
+  --surface-container-highest: #e5e2e1;
+  --surface-container-high: #eae7e7;
+  --surface-container: #f0eded;
+  --surface-container-low: #f6f3f2;
+  --surface-container-lowest: #ffffff;
+  --on-surface: #1c1b1b;
+  --on-surface-variant: #594139;
+  --outline: #8d7168;
+  --outline-variant: #e1bfb5;
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+}
+
+.dark {
+  --background: #050505;
+  --foreground: #e6e1e0;
+  --theme-primary: #ffb59d;
+  --theme-on-primary: #5c1900;
+  --theme-primary-container: #832600;
+  --theme-on-primary-container: #ffdbd0;
+
+  --surface: #121212;
+  --surface-bright: #1c1b1b;
+  --surface-variant: #52443f;
+  --surface-container-highest: #383433;
+  --surface-container-high: #2d2929;
+  --surface-container: #231f1e;
+  --surface-container-low: #1c1b1b;
+  --surface-container-lowest: #0f0d0d;
+  --on-surface: #e6e1e0;
+  --on-surface-variant: #d7c2bc;
+  --outline: #a08c85;
+  --outline-variant: #52443f;
+  --error: #ffb4ab;
+  --on-error: #690005;
+  --error-container: #93000a;
+  --on-error-container: #ffdad6;
 }
 
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
-  /* Theme Colors */
-  --color-surface-bright: #fcf9f8;
-  --color-error-container: #ffdad6;
-  --color-secondary-container: #91f78e;
-  --color-on-secondary-fixed: #002204;
-  --color-secondary: #006e1c;
-  --color-on-secondary: #ffffff;
-  --color-primary-fixed: #ffdbd0;
-  --color-on-primary-fixed-variant: #832600;
-  --color-on-background: #1c1b1b;
-  --color-surface-variant: #e5e2e1;
-  --color-surface-container-highest: #e5e2e1;
-  --color-inverse-on-surface: #f3f0ef;
-  --color-surface-dim: #dcd9d9;
-  --color-on-surface-variant: #594139;
-  --color-surface-tint: #ab3500;
-  --color-surface-container-lowest: #ffffff;
-  --color-on-error-container: #93000a;
-  --color-outline-variant: #e1bfb5;
   --color-primary: var(--theme-primary);
   --color-on-primary: var(--theme-on-primary);
-  --color-tertiary: #0061a4;
-  --color-on-tertiary-fixed: #001d36;
-  --color-error: #ba1a1a;
-  --color-surface-container-high: #eae7e7;
-  --color-secondary-fixed: #94f990;
-  --color-tertiary-fixed: #d1e4ff;
-  --color-inverse-surface: #313030;
-  --color-on-tertiary: #ffffff;
-  --color-secondary-fixed-dim: #78dc77;
-  --color-surface-container-low: #f6f3f2;
-  --color-on-surface: #1c1b1b;
-  --color-on-error: #ffffff;
-  --color-on-primary-container: var(--theme-on-primary-container);
-  --color-tertiary-container: #309efb;
-  --color-on-primary-fixed: #390c00;
-  --color-on-tertiary-fixed-variant: #00497d;
   --color-primary-container: var(--theme-primary-container);
-  --color-on-secondary-container: #00731e;
-  --color-outline: #8d7168;
-  --color-on-tertiary-container: #00335a;
-  --color-inverse-primary: #ffb59d;
-  --color-surface: #fcf9f8;
-  --color-tertiary-fixed-dim: #9ecaff;
-  --color-primary-fixed-dim: #ffb59d;
-  --color-surface-container: #f0eded;
-  --color-on-secondary-fixed-variant: #005313;
+  --color-on-primary-container: var(--theme-on-primary-container);
+  
+  --color-surface: var(--surface);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-variant: var(--surface-variant);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
 
   /* Spacing */
   --spacing-margin-mobile: 16px;
@@ -138,3 +153,29 @@ body {
   -webkit-tap-highlight-color: transparent;
   min-height: max(884px, 100dvh);
 }
+
+/* ==========================================
+   Auth page animations
+   ========================================== */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-4px); }
+  30%, 70% { transform: translateX(4px); }
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+

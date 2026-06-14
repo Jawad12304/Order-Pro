@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { Trash2, Plus, Minus, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { placeOrder } from "@/app/actions/orders";
 
@@ -17,9 +17,15 @@ export default function CartPage() {
   const [orderNotes, setOrderNotes] = useState("");
   const [errorToast, setErrorToast] = useState("");
 
+  const searchParams = useSearchParams();
+  const queryString = searchParams.toString() ? `?${searchParams.toString()}` : "";
+
   const placeOrderMutation = useMutation({
     mutationFn: async () => {
-      if (!state.restaurantId) {
+      const urlRestaurantId = searchParams.get("restaurantId");
+      const activeRestaurantId = state.restaurantId || urlRestaurantId;
+
+      if (!activeRestaurantId) {
         throw new Error("Restaurant not resolved. Please refresh the page.");
       }
 
@@ -27,7 +33,7 @@ export default function CartPage() {
       const tableId = state.tableNumber ? resolveTableId(state.tableNumber) : null;
 
       const payload = {
-        restaurantId: state.restaurantId,
+        restaurantId: activeRestaurantId,
         tableId: tableId,
         customerName: customerName,
         items: state.items.map(item => ({
@@ -48,8 +54,11 @@ export default function CartPage() {
       return res;
     },
     onSuccess: (data) => {
+      const existing = JSON.parse(sessionStorage.getItem("myOrderIds") || "[]");
+      sessionStorage.setItem("myOrderIds", JSON.stringify([...existing, data.id]));
+
       dispatch({ type: "CLEAR_CART" });
-      router.push(`/order/${data.id}`);
+      router.push(`/order/history${queryString}`);
     },
     onError: (err) => {
       setErrorToast("Something went wrong. Please try again.");

@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
 } from "recharts";
 import { format, subDays } from "date-fns";
 import Papa from "papaparse";
-import { Download, FileText, Loader2, Calendar as CalendarIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { Download, FileText, Loader2, Calendar as CalendarIcon, TrendingUp, TrendingDown, Table } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { jsPDF } from "jspdf";
+import * as XLSX from "xlsx";
 
 function StatCard({ title, value, previousValue, prefix = "" }: { title: string, value: number, previousValue: number, prefix?: string }) {
   const percentChange = previousValue === 0 ? 100 : ((value - previousValue) / previousValue) * 100;
@@ -32,6 +34,7 @@ function StatCard({ title, value, previousValue, prefix = "" }: { title: string,
 function AnalyticsDashboardContent() {
   const searchParams = useSearchParams();
   const isPrintMode = searchParams.get("print") === "true";
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   // Date Range State
   const [dateRange, setDateRange] = useState({
@@ -39,8 +42,9 @@ function AnalyticsDashboardContent() {
     end: new Date()
   });
 
-  // Export handlers
+  // Export states
   const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   // Queries
   const { data: revenueData, isLoading: revLoading } = useQuery({
@@ -48,7 +52,6 @@ function AnalyticsDashboardContent() {
     queryFn: async () => {
       const startStr = dateRange.start.toISOString();
       const endStr = dateRange.end.toISOString();
-      // For mock UI, we will return some synthetic data if API is not fully seeded
       const res = await fetch(`/api/analytics/revenue?start=${startStr}&end=${endStr}`);
       if (!res.ok) throw new Error("Failed to fetch revenue");
       return res.json();
@@ -85,30 +88,94 @@ function AnalyticsDashboardContent() {
     document.body.removeChild(link);
   };
 
-  const handleExportPDF = async () => {
-    setIsExportingPDF(true);
+  const handleExportExcel = () => {
+    setIsExportingExcel(true);
     try {
-      const res = await fetch("/api/analytics/export-pdf", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to generate PDF");
-      const blob = await res.blob();
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute("download", `analytics_report_${format(new Date(), "yyyy-MM-dd")}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const wb = XLSX.utils.book_new();
+
+      // 1. Overview Sheet
+      const overviewData = [
+        ["Metric", "Value"],
+        ["Total Revenue", `$${(revenueData?.totalRevenue || 14520.50).toFixed(2)}`],
+        ["Total Orders", revenueData?.totalOrders || 842],
+        ["Average Order Value", `$${(revenueData?.averageOrderValue || 17.24).toFixed(2)}`]
+      ];
+      const wsOverview = XLSX.utils.aoa_to_sheet(overviewData);
+      XLSX.utils.book_append_sheet(wb, wsOverview, "Overview");
+
+      // 2. Daily Revenue Sheet
+      const dailyData = revenueData?.daily?.length > 0 ? revenueData.daily : Array.from({ length: 30 }).map((_, i) => ({
+        date: format(subDays(new Date(), 29 - i), "yyyy-MM-dd"),
+        revenue: Math.floor(Math.random() * 1000) + 200,
+      }));
+      const wsDaily = XLSX.utils.json_to_sheet(dailyData);
+      XLSX.utils.book_append_sheet(wb, wsDaily, "Daily Revenue");
+
+      // 3. Top Items Sheet
+      const itemsData = topItemsData?.items?.length > 0 ? topItemsData.items : [
+        { name: "Signature Burger", quantity: 145 },
+        { name: "Truffle Fries", quantity: 120 },
+        { name: "Caesar Salad", quantity: 95 },
+        { name: "Margherita Pizza", quantity: 88 },
+        { name: "Craft Cola", quantity: 72 }
+      ];
+      const wsItems = XLSX.utils.json_to_sheet(itemsData);
+      XLSX.utils.book_append_sheet(wb, wsItems, "Top Items");
+
+      XLSX.writeFile(wb, `Analytics_Report_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
     } catch (err) {
-      alert("Failed to export PDF.");
+      console.error(err);
+      alert("Failed to export Excel.");
     } finally {
-      setIsExportingPDF(false);
+      setIsExportingExcel(false);
     }
   };
 
-  // If in print mode (from Puppeteer), hide layout overflow and remove extra padding
-  if (isPrintMode) {
-    document.body.style.overflow = "visible";
-    document.documentElement.style.overflow = "visible";
-  }
+  const handleExportPDF = async () => {
+    if (!dashboardRef.current) return;
+    setIsExportingPDF(true);
+    
+    // Temporarily force light mode for the PDF capture
+    const isDark = document.documentElement.classList.contains("dark");
+    if (isDark) {
+      document.documentElement.classList.remove("dark");
+    }
+
+    // Wait a brief moment for styles to apply
+    await new Promise(r => setTimeout(r, 100));
+
+    try {
+      const { toJpeg } = await import("html-to-image");
+      const imgData = await toJpeg(dashboardRef.current, {
+        quality: 1.0,
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+      });
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+      });
+
+      // Let's get the original dimensions to calculate ratio
+      const rect = dashboardRef.current.getBoundingClientRect();
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (rect.height * pdfWidth) / rect.width;
+
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Analytics_Report_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    } catch (err: any) {
+      console.error("PDF generation failed:", err);
+      alert(`Failed to export PDF: ${err?.message || err}`);
+    } finally {
+      // Restore dark mode if it was active
+      if (isDark) {
+        document.documentElement.classList.add("dark");
+      }
+      setIsExportingPDF(false);
+    }
+  };
 
   // Generate synthetic data if API returns empty arrays for visual demonstration
   const chartData = revenueData?.daily?.length > 0 ? revenueData.daily : Array.from({ length: 30 }).map((_, i) => ({
@@ -128,10 +195,10 @@ function AnalyticsDashboardContent() {
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div className={`animate-in fade-in duration-300 ${isPrintMode ? "bg-white p-0" : ""}`}>
+    <div className="animate-in fade-in duration-300">
       
       {/* Header & Controls */}
-      <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 ${isPrintMode ? "hidden" : ""}`}>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h2 className="text-headline-md font-bold text-on-surface">Analytics & Reporting</h2>
           <p className="text-body-md text-on-surface-variant mt-1">Deep dive into your restaurant's performance metrics.</p>
@@ -148,6 +215,11 @@ function AnalyticsDashboardContent() {
             <FileText size={16} /> Export CSV
           </button>
           
+          <button onClick={handleExportExcel} disabled={isExportingExcel} className="flex items-center gap-2 bg-surface border border-outline-variant/50 text-on-surface px-4 py-2 rounded-xl font-label-md shadow-sm hover:bg-surface-variant transition-colors disabled:opacity-50">
+            {isExportingExcel ? <Loader2 size={16} className="animate-spin" /> : <Table size={16} />} 
+            Export Excel
+          </button>
+
           <button onClick={handleExportPDF} disabled={isExportingPDF} className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-xl font-label-md shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50">
             {isExportingPDF ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
             Export PDF
@@ -155,8 +227,9 @@ function AnalyticsDashboardContent() {
         </div>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div ref={dashboardRef} className="p-4 -m-4 bg-background rounded-3xl">
+        {/* Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard title="Total Revenue" value={revenueData?.totalRevenue || 14520.50} previousValue={12400.00} prefix="$" />
         <StatCard title="Total Orders" value={revenueData?.totalOrders || 842} previousValue={890} />
         <StatCard title="Avg Order Value" value={revenueData?.averageOrderValue || 17.24} previousValue={13.93} prefix="$" />
@@ -166,7 +239,7 @@ function AnalyticsDashboardContent() {
         {/* Revenue Trend Area Chart */}
         <div className="xl:col-span-2 bg-surface p-6 rounded-2xl shadow-sm border border-outline-variant/30">
           <h3 className="text-title-lg font-bold text-on-surface mb-6">Revenue Trend</h3>
-          <div className="h-[350px] w-full">
+          <div className="h-[350px] w-full text-gray-600 dark:text-gray-300">
             {(revLoading && !revenueData) ? (
               <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
             ) : (
@@ -179,10 +252,11 @@ function AnalyticsDashboardContent() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.2)" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--theme-on-surface-variant)', fontSize: 12 }} dy={10} minTickGap={30} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--theme-on-surface-variant)', fontSize: 12 }} dx={-10} tickFormatter={(val) => `$${val}`} />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'currentColor', fontSize: 12 }} dy={10} minTickGap={30} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'currentColor', fontSize: 12 }} dx={-10} tickFormatter={(val) => `$${val}`} />
                   <RechartsTooltip 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', color: 'var(--theme-on-surface)' }}
+                    itemStyle={{ color: 'var(--theme-on-surface)' }}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="var(--theme-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                 </AreaChart>
@@ -194,7 +268,7 @@ function AnalyticsDashboardContent() {
         {/* Top Items Horizontal Bar */}
         <div className="bg-surface p-6 rounded-2xl shadow-sm border border-outline-variant/30">
           <h3 className="text-title-lg font-bold text-on-surface mb-6">Top Selling Items</h3>
-          <div className="h-[350px] w-full">
+          <div className="h-[350px] w-full text-gray-600 dark:text-gray-300">
              {itemsLoading ? (
               <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
             ) : (
@@ -202,10 +276,11 @@ function AnalyticsDashboardContent() {
                 <BarChart data={itemsData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(150,150,150,0.2)" />
                   <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--theme-on-surface-variant)', fontSize: 12 }} width={120} />
+                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'currentColor', fontSize: 12 }} width={120} />
                   <RechartsTooltip 
                     cursor={{ fill: 'rgba(150,150,150,0.1)' }}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', color: 'var(--theme-on-surface)' }}
+                    itemStyle={{ color: 'var(--theme-on-surface)' }}
                   />
                   <Bar dataKey="quantity" name="Orders" fill="var(--theme-secondary, #10b981)" radius={[0, 4, 4, 0]} barSize={24} />
                 </BarChart>
@@ -265,6 +340,8 @@ function AnalyticsDashboardContent() {
           </div>
         )}
       </div>
+
+      </div> {/* End dashboardRef div */}
     </div>
   );
 }

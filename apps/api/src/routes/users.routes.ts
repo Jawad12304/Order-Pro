@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // MenuQR — User Management Routes
 //
 // All routes require RESTAURANT_ADMIN or SUPER_ADMIN. A RESTAURANT_ADMIN is
@@ -122,15 +122,15 @@ router.post("/", async (req: Request, res: Response) => {
 // ------------------------------------------
 // Helper: load a target user within the requester's scope
 // ------------------------------------------
-async function loadScopedUser(req: Request) {
+async function loadScopedUser(req: Request): Promise<{ error: string } | { user: any }> {
   const restaurantId = resolveRestaurantScope(req);
-  if (!restaurantId) return { error: "A restaurant_id is required." as const };
+  if (!restaurantId) return { error: "A restaurant_id is required." };
 
   const target = await prisma.user.findUnique({
     where: { id: req.params.userId },
   });
   if (!target || target.restaurantId !== restaurantId) {
-    return { error: "User not found." as const };
+    return { error: "User not found." };
   }
   return { user: target };
 }

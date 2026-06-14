@@ -3,9 +3,12 @@
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, GripVertical, Image as ImageIcon, X, Loader2, Sparkles, Trash2, FolderOutput, Eye } from "lucide-react";
+import { Plus, GripVertical, Image as ImageIcon, X, Loader2, Sparkles, Trash2, FolderOutput, Eye, Search } from "lucide-react";
 import { useRestaurantId } from "@/hooks/useRestaurantId";
 import imageCompression from "browser-image-compression";
+import Cropper from "react-easy-crop";
+import "react-easy-crop/react-easy-crop.css";
+import { getCroppedImg } from "@/utils/cropImage";
 import { ModifierGroupEditor, ModifierGroup } from "@/components/admin/ModifierGroupEditor";
 import { 
   getCategories, 
@@ -15,7 +18,10 @@ import {
   updateMenuItemAvailability, 
   deleteMenuItems,
   createMenuItem,
-  updateMenuItem
+  updateMenuItem,
+  createCategory,
+  updateCategory,
+  deleteCategory
 } from "@/app/actions/menu";
 import { arrayMove } from "@dnd-kit/sortable";
 
@@ -35,7 +41,7 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 const DIETARY_TAGS = ["Vegan", "Vegetarian", "Gluten-Free", "Spicy"];
 const ALLERGENS = ["Dairy", "Nuts", "Eggs", "Soy", "Shellfish", "Wheat"];
 
-function SortableCategoryItem({ id, name, activeId, onClick }: { id: string, name: string, activeId: string, onClick: () => void }) {
+function SortableCategoryItem({ id, name, activeId, onClick, onEdit, onDelete }: { id: string, name: string, activeId: string, onClick: () => void, onEdit: (id: string, name: string) => void, onDelete: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : 1 };
 
@@ -43,14 +49,27 @@ function SortableCategoryItem({ id, name, activeId, onClick }: { id: string, nam
     <div
       ref={setNodeRef}
       style={style}
-      onClick={onClick}
-      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border ${
+      className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border ${
         isDragging ? "bg-surface-variant shadow-lg opacity-80 border-primary" : 
         activeId === id ? "bg-primary/10 border-primary text-primary" : "bg-surface border-transparent hover:bg-surface-variant text-on-surface"
       }`}
     >
-      <span className="font-medium text-body-md">{name}</span>
-      <div {...attributes} {...listeners} className="cursor-grab p-1 text-on-surface-variant hover:text-on-surface active:cursor-grabbing">
+      <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap pr-2" onClick={onClick}>
+        <span className="font-medium text-body-md">{name}</span>
+      </div>
+      
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button onClick={(e) => { e.stopPropagation(); onEdit(id, name); }} className="p-1.5 text-on-surface-variant hover:text-primary rounded-md transition-colors">
+          <Sparkles size={14} className="hidden" /> {/* just keeping import used if not */}
+          <Eye size={14} className="hidden" />
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); onDelete(id); }} className="p-1.5 text-on-surface-variant hover:text-error rounded-md transition-colors">
+          <Trash2 size={14} />
+        </button>
+      </div>
+
+      <div {...attributes} {...listeners} className="cursor-grab p-1 ml-1 text-on-surface-variant hover:text-on-surface active:cursor-grabbing">
         <GripVertical size={16} />
       </div>
     </div>
@@ -99,6 +118,10 @@ export default function MenuManagementPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   
+  // Category Modal State
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<{ id?: string, name: string } | null>(null);
+
   // Bulk Selection
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
 
@@ -122,36 +145,45 @@ export default function MenuManagementPage() {
 
   const [isUploading, setIsUploading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Cropper States
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [isCropping, setIsCropping] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const { data: fetchedCategories = [], isLoading: loadingCategories } = useQuery({
+  const { data: fetchedCategories, isLoading: loadingCategories } = useQuery({
     queryKey: ['categories', restaurantId],
     queryFn: () => getCategories(restaurantId!),
     enabled: !!restaurantId,
   });
 
-  const { data: fetchedItems = [], isLoading: loadingItems } = useQuery({
+  const { data: fetchedItems, isLoading: loadingItems } = useQuery({
     queryKey: ['menuItems', restaurantId],
     queryFn: () => getMenuItems(restaurantId!),
     enabled: !!restaurantId,
   });
 
   React.useEffect(() => {
-    if (fetchedCategories.length > 0 && !activeCategoryId) {
+    if (fetchedCategories && fetchedCategories.length > 0 && !activeCategoryId) {
       setActiveCategoryId(fetchedCategories[0].id);
     }
   }, [fetchedCategories, activeCategoryId]);
 
   React.useEffect(() => {
-    setCategories(fetchedCategories);
+    if (fetchedCategories) setCategories(fetchedCategories);
   }, [fetchedCategories]);
 
   React.useEffect(() => {
-    setItems(fetchedItems);
+    if (fetchedItems) setItems(fetchedItems);
   }, [fetchedItems]);
 
   const loading = resLoading || loadingCategories || loadingItems;
@@ -243,6 +275,22 @@ export default function MenuManagementPage() {
         price: item.price.toString(),
         categoryId: item.categoryId,
         isAvailable: item.isAvailable,
+        description: item.description || "",
+        prepTime: item.prepTimeMins ? item.prepTimeMins.toString() : "",
+        imageUrl: item.imageUrl || "",
+        dietaryTags: item.dietaryTags || [],
+        allergens: item.allergens || [],
+        modifierGroups: item.modifierGroups ? item.modifierGroups.map((mg: any) => ({
+          id: mg.modifierGroup.id,
+          name: mg.modifierGroup.name,
+          minSelections: mg.modifierGroup.minSelections,
+          maxSelections: mg.modifierGroup.maxSelections,
+          options: mg.modifierGroup.modifiers.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            priceDelta: m.priceDelta
+          }))
+        })) : []
       });
       setEditingItem(item);
     } else {
@@ -261,17 +309,32 @@ export default function MenuManagementPage() {
     if (!file) return;
 
     try {
-      setIsUploading(true);
-      const options = { maxSizeMB: 1, maxWidthOrHeight: 1024, useWebWorker: true };
-      const compressedFile = await imageCompression(file, options);
-      
-      await new Promise(r => setTimeout(r, 1500));
-      const previewUrl = URL.createObjectURL(compressedFile);
-      setFormData(prev => ({ ...prev, imageUrl: previewUrl }));
-
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        setImageSrc(reader.result?.toString() || null);
+        setIsCropping(true);
+      });
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error("Image upload failed", error);
+      console.error("Image load failed", error);
       alert("Failed to process image.");
+    }
+  };
+
+  const onCropComplete = (croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  };
+
+  const showCroppedImage = async () => {
+    try {
+      if (!imageSrc || !croppedAreaPixels) return;
+      setIsUploading(true);
+      const croppedImageBase64 = await getCroppedImg(imageSrc, croppedAreaPixels, rotation);
+      setFormData(prev => ({ ...prev, imageUrl: croppedImageBase64 }));
+      setIsCropping(false);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to crop image");
     } finally {
       setIsUploading(false);
     }
@@ -283,7 +346,7 @@ export default function MenuManagementPage() {
     await new Promise(r => setTimeout(r, 1000));
     setFormData(prev => ({
       ...prev,
-      nameArabic: prev.name ? `${prev.name} (Arabic Translation)` : "",
+      nameArabic: prev.name ? `${prev.name} (Urdu Translation)` : "",
     }));
     setIsTranslating(false);
   };
@@ -300,8 +363,8 @@ export default function MenuManagementPage() {
         imageUrl: formData.imageUrl,
         isAvailable: formData.isAvailable,
         prepTimeMins: parseInt(formData.prepTime) || null,
-        dietaryTags: formData.dietaryTags,
-        allergens: formData.allergens,
+        tags: formData.dietaryTags || [],
+        allergens: formData.allergens || [],
         modifierGroups: formData.modifierGroups
       };
 
@@ -321,6 +384,54 @@ export default function MenuManagementPage() {
     }
   };
 
+  const openCategoryModal = (id?: string, name?: string) => {
+    setEditingCategory(id && name ? { id, name } : { name: "" });
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleSaveCategory = async () => {
+    if (!restaurantId || !editingCategory || !editingCategory.name.trim()) return;
+    try {
+      let newCatId = editingCategory.id;
+      if (editingCategory.id) {
+        await updateCategory(editingCategory.id, { name: editingCategory.name });
+      } else {
+        const res = await createCategory({ restaurantId, name: editingCategory.name });
+        newCatId = res.id;
+      }
+      const fetchedCategories = await getCategories(restaurantId);
+      setCategories(fetchedCategories);
+      
+      // Auto-select category if none is selected so the Add Item button works
+      if (!activeCategoryId) {
+        if (newCatId) setActiveCategoryId(newCatId);
+        else if (fetchedCategories.length > 0) setActiveCategoryId(fetchedCategories[0].id);
+      }
+      
+      setIsCategoryModalOpen(false);
+    } catch (error) {
+      alert("Failed to save category.");
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (confirm("Are you sure you want to delete this category?")) {
+      try {
+        const res = await deleteCategory(id);
+        if (!res.success) {
+          alert(res.error);
+        } else {
+          setCategories(categories.filter(c => c.id !== id));
+          if (activeCategoryId === id) {
+            setActiveCategoryId("");
+          }
+        }
+      } catch (err) {
+        alert("Failed to delete category.");
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -329,23 +440,24 @@ export default function MenuManagementPage() {
     );
   }
 
-  const filteredItems = items.filter(i => i.categoryId === activeCategoryId).sort((a, b) => a.sortOrder - b.sortOrder);
+  const filteredItems = items
+    .filter(i => {
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        return i.name.toLowerCase().includes(query) || (i.description && i.description.toLowerCase().includes(query));
+      }
+      return i.categoryId === activeCategoryId;
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row gap-6 animate-in fade-in duration-300 relative">
       
-      {/* Top action: Preview Menu */}
-      <div className="absolute -top-14 right-0">
-        <button onClick={() => window.open("/menu?table=Preview", "_blank")} className="flex items-center gap-2 bg-surface border border-outline-variant/50 text-on-surface px-4 py-2 rounded-xl font-label-md shadow-sm hover:bg-surface-variant transition-colors">
-          <Eye size={18} /> Preview Menu
-        </button>
-      </div>
-
       {/* Categories Sidebar (Left) */}
-      <div className="w-full md:w-72 shrink-0 flex flex-col gap-4 bg-surface rounded-2xl p-4 shadow-sm border border-outline-variant/30 h-full overflow-hidden">
-        <div className="flex justify-between items-center mb-2">
+      <div className="w-full md:w-72 shrink-0 flex flex-col gap-4 bg-surface/50 backdrop-blur-xl rounded-[2.5rem] p-5 shadow-sm border border-white/10 h-full overflow-hidden">
+        <div className="flex justify-between items-center mb-2 px-1">
           <h3 className="font-title-lg font-bold text-on-surface">Categories</h3>
-          <button className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors">
+          <button onClick={() => openCategoryModal()} className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors">
             <Plus size={18} />
           </button>
         </div>
@@ -355,7 +467,15 @@ export default function MenuManagementPage() {
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCategoryDragEnd}>
               <SortableContext items={categories.map(c => c.id)} strategy={verticalListSortingStrategy}>
                 {categories.map((cat) => (
-                  <SortableCategoryItem key={cat.id} id={cat.id} name={cat.name} activeId={activeCategoryId} onClick={() => setActiveCategoryId(cat.id)} />
+                  <SortableCategoryItem 
+                    key={cat.id} 
+                    id={cat.id} 
+                    name={cat.name} 
+                    activeId={activeCategoryId} 
+                    onClick={() => setActiveCategoryId(cat.id)}
+                    onEdit={openCategoryModal}
+                    onDelete={handleDeleteCategory}
+                  />
                 ))}
               </SortableContext>
             </DndContext>
@@ -366,17 +486,37 @@ export default function MenuManagementPage() {
       </div>
 
       {/* Items Grid View (Right) */}
-      <div className="flex-1 bg-surface rounded-2xl p-6 shadow-sm border border-outline-variant/30 h-full overflow-hidden flex flex-col relative">
-        <div className="flex justify-between items-center mb-6 shrink-0">
+      <div className="flex-1 bg-surface/50 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-sm border border-white/10 h-full overflow-hidden flex flex-col relative">
+        <div className="flex justify-between items-center mb-6 shrink-0 gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <h3 className="font-title-lg font-bold text-on-surface">
-              {categories.find(c => c.id === activeCategoryId)?.name || "Items"}
+              {searchQuery.trim() ? "Search Results" : (categories.find(c => c.id === activeCategoryId)?.name || "Items")}
             </h3>
             <span className="text-label-sm bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded-full">{filteredItems.length} items</span>
           </div>
-          <button onClick={() => openModal()} className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-xl font-label-md shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50" disabled={!activeCategoryId}>
-            <Plus size={18} /> Add Item
-          </button>
+          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search menu items..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-xl text-body-md focus:outline-none focus:border-primary transition-colors"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <button onClick={() => window.open(`/menu?table=Preview&restaurantId=${restaurantId}`, "_blank")} className="flex items-center gap-2 bg-surface border border-white/20 text-on-surface px-4 py-2 rounded-xl font-label-md shadow-sm hover:bg-surface-variant transition-colors whitespace-nowrap">
+              <Eye size={18} /> Preview Menu
+            </button>
+            <button onClick={() => openModal()} className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-xl font-label-md shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50" disabled={!activeCategoryId}>
+              <Plus size={18} /> Add Item
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-20">
@@ -447,8 +587,8 @@ export default function MenuManagementPage() {
                 </div>
 
                 <div>
-                  <label className="block text-label-sm font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Localized Name (Arabic)</label>
-                  <input type="text" dir="rtl" value={formData.nameArabic} onChange={e => setFormData({...formData, nameArabic: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-xl p-3 text-body-md focus:outline-none focus:border-primary transition-colors font-arabic" placeholder="برجر لحم كلاسيك" />
+                  <label className="block text-label-sm font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Localized Name (Urdu)</label>
+                  <input type="text" dir="rtl" value={formData.nameArabic} onChange={e => setFormData({...formData, nameArabic: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-xl p-3 text-body-md focus:outline-none focus:border-primary transition-colors font-arabic" placeholder="کلاسک بیف برگر" />
                 </div>
 
                 <div className="flex gap-4">
@@ -541,66 +681,102 @@ export default function MenuManagementPage() {
                   </div>
                 </div>
 
-                {/* Tags & Allergens */}
-                <div>
-                  <h3 className="text-title-md font-bold text-on-surface mb-3 border-b border-outline-variant/20 pb-2">Dietary & Allergens</h3>
-                  
-                  <div className="mb-4">
-                    <label className="block text-label-xs font-bold text-on-surface-variant mb-2">Dietary Tags</label>
-                    <div className="flex flex-wrap gap-2">
-                      {DIETARY_TAGS.map(tag => (
-                        <button 
-                          key={tag}
-                          onClick={() => {
-                            const newTags = formData.dietaryTags.includes(tag) 
-                              ? formData.dietaryTags.filter(t => t !== tag)
-                              : [...formData.dietaryTags, tag];
-                            setFormData({...formData, dietaryTags: newTags});
-                          }}
-                          className={`px-3 py-1.5 rounded-full text-label-sm font-semibold border transition-colors ${formData.dietaryTags.includes(tag) ? "bg-primary text-on-primary border-primary" : "bg-surface text-on-surface-variant border-outline-variant/50 hover:border-outline-variant"}`}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-label-xs font-bold text-on-surface-variant mb-2">Allergens</label>
-                    <div className="flex flex-wrap gap-2">
-                      {ALLERGENS.map(alg => (
-                        <button 
-                          key={alg}
-                          onClick={() => {
-                            const newTags = formData.allergens.includes(alg) 
-                              ? formData.allergens.filter(t => t !== alg)
-                              : [...formData.allergens, alg];
-                            setFormData({...formData, allergens: newTags});
-                          }}
-                          className={`px-3 py-1.5 rounded-full text-label-sm font-semibold border transition-colors ${formData.allergens.includes(alg) ? "bg-error text-on-error border-error" : "bg-surface text-on-surface-variant border-outline-variant/50 hover:border-outline-variant"}`}
-                        >
-                          {alg}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
                 {/* Modifiers */}
                 <div>
-                  <h3 className="text-title-md font-bold text-on-surface mb-3 border-b border-outline-variant/20 pb-2">Modifier Groups</h3>
+                  <h3 className="text-title-md font-bold text-on-surface mb-3 border-b border-outline-variant/20 pb-2">Modifiers & Options</h3>
                   <ModifierGroupEditor 
                     groups={formData.modifierGroups} 
-                    onChange={(groups) => setFormData({...formData, modifierGroups: groups})} 
+                    onChange={groups => setFormData({...formData, modifierGroups: groups})} 
                   />
                 </div>
-
               </div>
             </div>
 
             <div className="p-6 border-t border-outline-variant/30 flex justify-end gap-3 bg-surface-container-lowest mt-auto sm:rounded-b-3xl">
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl font-label-lg text-on-surface hover:bg-surface-variant transition-colors border border-transparent hover:border-outline-variant/30">Cancel</button>
               <button onClick={handleSaveItem} className="px-8 py-2.5 rounded-xl font-label-lg bg-primary text-on-primary hover:opacity-90 shadow-sm transition-opacity">Save Item</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CATEGORY MODAL */}
+      {isCategoryModalOpen && editingCategory && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-surface w-full min-w-[300px] max-w-md rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-5 sm:p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface">
+              <h2 className="text-title-lg font-bold text-on-surface">{editingCategory.id ? "Edit Category" : "New Category"}</h2>
+              <button onClick={() => setIsCategoryModalOpen(false)} className="text-on-surface-variant hover:bg-surface-variant p-2 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 sm:p-6 bg-surface-container-lowest">
+              <label className="block text-label-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">Category Name</label>
+              <input 
+                type="text" 
+                value={editingCategory.name} 
+                onChange={e => setEditingCategory({ ...editingCategory, name: e.target.value })} 
+                className="w-full bg-surface border border-outline-variant/50 rounded-xl p-4 text-body-lg sm:p-3 sm:text-body-md focus:outline-none focus:border-primary transition-colors" 
+                placeholder="e.g. Burgers, Drinks..." 
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleSaveCategory()}
+              />
+            </div>
+            <div className="p-5 sm:p-4 border-t border-outline-variant/30 flex justify-end gap-3 bg-surface">
+              <button onClick={() => setIsCategoryModalOpen(false)} className="px-5 py-3 sm:py-2 rounded-xl font-label-md text-on-surface hover:bg-surface-variant transition-colors">Cancel</button>
+              <button onClick={handleSaveCategory} className="px-6 py-3 sm:py-2 rounded-xl font-label-md bg-primary text-on-primary hover:opacity-90 shadow-sm transition-opacity">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* CROPPER MODAL */}
+      {isCropping && imageSrc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-surface w-full min-w-[320px] max-w-lg rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface">
+              <h2 className="text-title-lg font-bold text-on-surface">Crop Item Image</h2>
+              <button onClick={() => { setIsCropping(false); setImageSrc(null); }} className="text-on-surface-variant hover:bg-surface-variant p-2 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="relative w-full h-80 bg-black">
+              <Cropper
+                image={imageSrc}
+                crop={crop}
+                zoom={zoom}
+                rotation={rotation}
+                aspect={1}
+                onCropChange={setCrop}
+                onCropComplete={onCropComplete}
+                onZoomChange={setZoom}
+                onRotationChange={setRotation}
+              />
+            </div>
+
+            <div className="p-6 bg-surface-container-lowest space-y-4">
+              <div>
+                <div className="flex justify-between mb-2">
+                  <label className="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Zoom</label>
+                  <span className="text-label-sm text-on-surface-variant">{Math.round(zoom * 100)}%</span>
+                </div>
+                <input type="range" min={1} max={3} step={0.1} value={zoom} onChange={e => setZoom(Number(e.target.value))} className="w-full accent-primary" />
+              </div>
+              <div>
+                <div className="flex justify-between mb-2">
+                  <label className="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Rotation</label>
+                  <span className="text-label-sm text-on-surface-variant">{rotation}°</span>
+                </div>
+                <input type="range" min={0} max={360} step={1} value={rotation} onChange={e => setRotation(Number(e.target.value))} className="w-full accent-primary" />
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-outline-variant/30 flex justify-end gap-3 bg-surface">
+              <button onClick={() => { setIsCropping(false); setImageSrc(null); }} className="px-5 py-2 rounded-xl font-label-md text-on-surface hover:bg-surface-variant transition-colors">Cancel</button>
+              <button onClick={showCroppedImage} disabled={isUploading} className="px-6 py-2 rounded-xl font-label-md bg-primary text-on-primary hover:opacity-90 shadow-sm transition-opacity flex items-center gap-2">
+                {isUploading ? <Loader2 size={16} className="animate-spin" /> : null}
+                Apply Crop
+              </button>
             </div>
           </div>
         </div>

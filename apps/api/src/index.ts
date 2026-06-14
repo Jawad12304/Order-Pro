@@ -5,7 +5,12 @@ import dotenv from "dotenv";
 import { notificationService } from "./services/NotificationService";
 import { Request, Response } from "express";
 
-dotenv.config();
+import path from "path";
+
+// Load .env.local from monorepo root (two levels up from apps/api/)
+dotenv.config({ path: path.resolve(__dirname, "../../..", ".env.local") });
+// Fallback: also try .env at the root
+dotenv.config({ path: path.resolve(__dirname, "../../..", ".env") });
 
 const PORT = process.env.PORT || 5000;
 

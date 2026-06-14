@@ -1,66 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { createClient } from "@/utils/supabase/client";
+// ==========================================
+// MenuQR — useAuth Hook
+//
+// Provides the current user state by calling GET /api/auth/me (which reads
+// the httpOnly access/refresh token cookies on the backend). Exposes:
+//   - currentUser: MeResult | null
+//   - loading: boolean
+//   - logout(): Promise<void>
+//   - refresh(): Promise<void>  — re-fetches /me (e.g. after login)
+// ==========================================
+
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { apiGetMe, apiLogout, type MeResult } from "@/lib/api";
+
+export type { MeResult };
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [currentUser, setCurrentUser] = useState<MeResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
   const router = useRouter();
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function getSession() {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (mounted) {
-        if (error) {
-          console.error("Error fetching session:", error);
-        } else {
-          setSession(session);
-          setUser(session?.user ?? null);
-        }
-        setLoading(false);
-      }
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const user = await apiGetMe();
+      setCurrentUser(user);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    getSession();
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
+  const logout = useCallback(async () => {
+    try {
+      await apiLogout();
+    } catch {
+      // best-effort: even if logout call fails, redirect to login
+    }
+    setCurrentUser(null);
+    router.push("/");
+  }, [router]);
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [supabase.auth]);
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
-  const getToken = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || null;
-  };
-
-  return {
-    user,
-    session,
-    loading,
-    signOut,
-    getToken,
-    supabase,
-  };
+  return { currentUser, loading, logout, refresh };
 }
