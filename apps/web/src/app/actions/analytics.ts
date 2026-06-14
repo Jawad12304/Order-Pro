@@ -17,8 +17,8 @@ export async function getDashboardStats(restaurantId: string) {
       },
     });
     
-    const todaysRevenue = todaysOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-    const activeOrdersCount = todaysOrders.filter(o => o.status !== "PAID" && o.status !== "SERVED").length;
+    const todaysRevenue = todaysOrders.reduce((sum: any, o: any) => sum + o.totalAmount, 0);
+    const activeOrdersCount = todaysOrders.filter((o: any) => o.status !== "PAID" && o.status !== "SERVED").length;
     
     // Hourly Revenue Data (last 12 hours)
     // Simplified aggregation
@@ -32,8 +32,8 @@ export async function getDashboardStats(restaurantId: string) {
       const hourEnd = new Date(d);
       hourEnd.setMinutes(59, 59, 999);
       
-      const ordersInHour = todaysOrders.filter(o => o.createdAt >= hourStart && o.createdAt <= hourEnd);
-      const revenue = ordersInHour.reduce((sum, o) => sum + o.totalAmount, 0);
+      const ordersInHour = todaysOrders.filter((o: any) => o.createdAt >= hourStart && o.createdAt <= hourEnd);
+      const revenue = ordersInHour.reduce((sum: any, o: any) => sum + o.totalAmount, 0);
       
       return { time: hourLabel, revenue, orders: ordersInHour.length };
     });
@@ -52,7 +52,7 @@ export async function getDashboardStats(restaurantId: string) {
     });
 
     const itemCounts: Record<string, { name: string; value: number }> = {};
-    orderItems.forEach(item => {
+    orderItems.forEach((item: any) => {
       if (item.menuItem) {
         if (!itemCounts[item.menuItem.id]) {
           itemCounts[item.menuItem.id] = { name: item.menuItem.name, value: 0 };
