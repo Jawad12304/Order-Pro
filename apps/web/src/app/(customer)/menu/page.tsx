@@ -61,7 +61,7 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
           <button className="flex-none px-4 py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-md transition-all">
             All
           </button>
-          {restaurant.categories.map((cat) => (
+          {restaurant.categories.map((cat: any) => (
             <button key={cat.id} className="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-label-md hover:bg-surface-variant transition-colors whitespace-nowrap">
               {cat.name}
             </button>
@@ -72,7 +72,7 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
       <section className="px-4 md:px-margin-mobile mt-4 md:mt-lg pb-32">
         <Suspense fallback={<MenuSkeleton />}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-lg">
-            {restaurant.menuItems.map((item) => (
+            {restaurant.menuItems.map((item: any) => (
               <ItemCard key={item.id} item={item} />
             ))}
           </div>
