@@ -14,13 +14,14 @@
     "db:seed": "turbo run db:seed",
     "db:migrate": "turbo run db:migrate",
     "db:studio": "turbo run db:studio",
-    "postinstall": "pnpm turbo run db:generate"
+    "postinstall": "prisma generate --schema=packages/database/prisma/schema.prisma"
   },
   "devDependencies": {
     "eslint": "^9.39.4",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.5",
     "prettier": "^3.8.3",
+    "prisma": "^5.22.0",
     "turbo": "^2.0.4"
   },
   "packageManager": "pnpm@11.5.2",
