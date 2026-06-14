@@ -124,7 +124,7 @@ export default function OrderHistoryPage() {
             animate="show"
             className="space-y-5"
           >
-            {orders.map((order) => {
+            {orders.map((order: any) => {
               const statusConfig = getStatusConfig(order.status);
               const StatusIcon = statusConfig.icon;
               
