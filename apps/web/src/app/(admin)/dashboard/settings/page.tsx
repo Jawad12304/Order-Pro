@@ -348,7 +348,7 @@ export default function AdminSettingsPage() {
       {/* Cropper Modal */}
       {isCropping && imageSrc && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-surface rounded-3xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col h-[600px] max-h-[90dvh] border border-outline-variant/20">
+          <div className="bg-surface rounded-3xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col h-[85vh] md:h-[600px] border border-outline-variant/20">
             <div className="p-4 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest">
               <h3 className="text-title-md font-bold text-on-surface">Crop Profile Picture</h3>
               <button onClick={() => { setIsCropping(false); setImageSrc(null); }} className="text-on-surface-variant hover:text-on-surface">
@@ -356,7 +356,7 @@ export default function AdminSettingsPage() {
               </button>
             </div>
             
-            <div className="relative flex-1 bg-black/10">
+            <div className="relative flex-1 min-h-0 bg-black/10">
               <Cropper
                 image={imageSrc}
                 crop={crop}
