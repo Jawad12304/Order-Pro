@@ -453,8 +453,8 @@ export default function MenuManagementPage() {
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row gap-6 animate-in fade-in duration-300 relative">
       
-      {/* Categories Sidebar (Left) */}
-      <div className="w-full md:w-72 shrink-0 flex flex-col gap-4 bg-surface/50 backdrop-blur-xl rounded-[2.5rem] p-5 shadow-sm border border-white/10 h-full overflow-hidden">
+      {/* Categories Sidebar (Left on desktop, Top on mobile) */}
+      <div className="w-full md:w-64 shrink-0 flex flex-col gap-3 bg-surface/50 backdrop-blur-xl rounded-2xl md:rounded-[2.5rem] p-4 md:p-5 shadow-sm border border-white/10 max-h-48 md:max-h-none md:h-full overflow-hidden">
         <div className="flex justify-between items-center mb-2 px-1">
           <h3 className="font-title-lg font-bold text-on-surface">Categories</h3>
           <button onClick={() => openCategoryModal()} className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors">
@@ -486,7 +486,7 @@ export default function MenuManagementPage() {
       </div>
 
       {/* Items Grid View (Right) */}
-      <div className="flex-1 bg-surface/50 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-sm border border-white/10 h-full overflow-hidden flex flex-col relative">
+      <div className="flex-1 bg-surface/50 backdrop-blur-xl rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-white/10 min-h-0 md:h-full overflow-hidden flex flex-col relative">
         <div className="flex justify-between items-center mb-6 shrink-0 gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <h3 className="font-title-lg font-bold text-on-surface">

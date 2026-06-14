@@ -56,22 +56,22 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
   
   return (
     <>
-      <nav className="sticky top-16 z-40 bg-surface/80 backdrop-blur-2xl border-b border-outline-variant/30">
-        <div className="flex overflow-x-auto hide-scrollbar px-margin-mobile py-4 gap-sm items-center">
-          <button className="flex-none px-lg py-2 rounded-full bg-primary text-on-primary font-title-md text-title-md shadow-md transition-all">
+      <nav className="sticky top-14 md:top-16 z-40 bg-surface/80 backdrop-blur-2xl border-b border-outline-variant/30">
+        <div className="flex overflow-x-auto hide-scrollbar px-4 md:px-margin-mobile py-3 gap-2 items-center">
+          <button className="flex-none px-4 py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-md transition-all">
             All
           </button>
           {restaurant.categories.map((cat) => (
-            <button key={cat.id} className="flex-none px-lg py-2 rounded-full bg-surface-container-high text-on-surface-variant font-title-md text-title-md hover:bg-surface-variant transition-colors">
+            <button key={cat.id} className="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-label-md hover:bg-surface-variant transition-colors whitespace-nowrap">
               {cat.name}
             </button>
           ))}
         </div>
       </nav>
 
-      <section className="px-margin-mobile mt-lg">
+      <section className="px-4 md:px-margin-mobile mt-4 md:mt-lg pb-32">
         <Suspense fallback={<MenuSkeleton />}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-lg">
             {restaurant.menuItems.map((item) => (
               <ItemCard key={item.id} item={item} />
             ))}

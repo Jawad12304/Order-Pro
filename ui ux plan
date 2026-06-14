@@ -1,0 +1,43 @@
+# Comprehensive UI/UX Audit & Bug Fix Plan
+
+## Issues Found
+
+### Phase 1: Global Typography & Spacing Fixes
+- **`globals.css`**: `headline-xl` is 32px — too large on mobile. Add responsive sizes.
+- **`globals.css`**: Missing `text-title-lg`, `text-title-xl`, `text-headline-md`, `text-headline-sm`, `text-label-lg`, `text-label-md`, `text-label-sm`, `text-label-xs` definitions — Tailwind classes reference them but they fall back to browser defaults causing inconsistent sizing.
+- **`globals.css`**: Missing `--color-primary-fixed` used in customer layout header.
+- **`globals.css`**: `body { min-height: max(884px, 100dvh) }` forces minimum height even on small mobile — should just be `100dvh`.
+- **`globals.css`**: Missing `--color-secondary-container`, `--color-on-secondary-container`, `--color-secondary` used in order history.
+
+### Phase 2: Admin Dashboard Fixes
+- **`layout.tsx`**: Mobile sidebar has no slide animation (just appears/disappears).
+- **`page.tsx` (Overview)**: Legend text inherits Recharts' default dark color — invisible in dark mode.
+- **`orders/page.tsx`**: Table hidden on mobile when order selected (`hidden lg:flex`), but no back button on mobile detail panel — user gets stuck.
+- **`orders/page.tsx`**: Status badge colors (bg-orange-100, bg-blue-100 etc.) don't adapt to dark mode — look washed out.
+- **`menu/page.tsx`**: `h-[calc(100vh-140px)]` doesn't account for mobile toolbar properly; sidebar `w-72` collapses to `w-full` but still takes full height on mobile, pushing items grid out of view.
+- **`tables/page.tsx`**: QR value uses `restaurantId` CUID in domain — should be restaurant slug.
+- **`analytics/page.tsx`**: Heatmap tooltip not styled for dark mode.
+
+### Phase 3: Customer App Fixes
+- **`layout.tsx`**: Header restaurant name uses `text-headline-lg-mobile` (20px) — still too big; should be capped.
+- **`menu/page.tsx`**: Category pills use `text-title-md` (18px) — visually oversized for pill buttons.
+- **`cart/page.tsx`**: "Your Cart" heading uses `text-headline-xl` (32px) — oversized on mobile.
+- **`cart/page.tsx`**: No image shown next to cart items — looks barren compared to the menu.
+- **`BottomNavigation.tsx`**: Active detection for Menu tab is broken — `pathname === item.href` fails because `item.href` includes query string but `pathname` doesn't.
+- **`order/history/page.tsx`**: `format()` from date-fns could crash if `order.createdAt` is a string not a Date.
+
+### Phase 4: Polish
+- Ensure all interactive inputs have proper `text-on-surface` color in dark mode.
+- Ensure all `select` dropdowns have dark-mode-friendly text.
+
+## Execution Plan
+
+Fix in this order:
+1. `globals.css` — Add missing theme tokens and responsive font sizes
+2. Admin `orders/page.tsx` — Fix mobile detail panel + dark mode badges
+3. Admin `menu/page.tsx` — Fix mobile layout height
+4. Customer `layout.tsx` — Cap header font
+5. Customer `menu/page.tsx` — Fix category pill sizing
+6. Customer `cart/page.tsx` — Fix heading size
+7. Customer `BottomNavigation.tsx` — Fix active tab detection
+8. Customer `order/history/page.tsx` — Safe date parsing

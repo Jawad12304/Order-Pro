@@ -11,16 +11,18 @@ function BottomNavContent() {
   const queryString = searchParams.toString() ? `?${searchParams.toString()}` : "";
 
   const navItems = [
-    { label: "Menu", href: `/menu${queryString}`, icon: Utensils },
-    { label: "Search", href: `/menu/search${queryString}`, icon: Search },
-    { label: "Cart", href: `/cart${queryString}`, icon: ShoppingCart },
-    { label: "Orders", href: `/order/history${queryString}`, icon: Receipt },
+    { label: "Menu", href: `/menu${queryString}`, basePath: "/menu", icon: Utensils },
+    { label: "Search", href: `/menu/search${queryString}`, basePath: "/menu/search", icon: Search },
+    { label: "Cart", href: `/cart${queryString}`, basePath: "/cart", icon: ShoppingCart },
+    { label: "Orders", href: `/order/history${queryString}`, basePath: "/order/history", icon: Receipt },
   ];
 
   return (
-    <nav className="bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-2xl docked full-width bottom-0 rounded-t-xl shadow-lg fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2">
+    <nav className="bg-surface/80 dark:bg-surface/80 backdrop-blur-2xl shadow-lg fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 border-t border-outline-variant/20">
       {navItems.map((item) => {
-        const isActive = pathname === item.href || (item.href !== "/menu" && pathname.startsWith(item.href));
+        const isActive = item.basePath === "/menu"
+          ? pathname === "/menu"
+          : pathname.startsWith(item.basePath);
         const Icon = item.icon;
 
         if (isActive) {

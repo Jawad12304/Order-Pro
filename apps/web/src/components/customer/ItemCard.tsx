@@ -27,7 +27,7 @@ export default function ItemCard({ item }: ItemCardProps) {
 
   return (
     <div className="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-lg transition-shadow border border-outline-variant/10 flex flex-col h-full">
-      <div className="relative aspect-square overflow-hidden bg-surface-container-high">
+      <div className="relative aspect-[4/3] md:aspect-square overflow-hidden bg-surface-container-high">
         {item.imageUrl ? (
           <Image
             src={item.imageUrl}
@@ -43,42 +43,42 @@ export default function ItemCard({ item }: ItemCardProps) {
         )}
         
         {/* Dietary Tags Overlay */}
-        <div className="absolute top-sm right-sm flex flex-col gap-xs">
+        <div className="absolute top-2 right-2 flex flex-col gap-1">
           {isVegan && (
             <div className="bg-surface/90 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <Leaf className="w-4 h-4 text-secondary" fill="currentColor" />
+              <Leaf className="w-3.5 h-3.5 text-secondary" fill="currentColor" />
               <span className="text-[10px] font-bold text-on-surface uppercase tracking-wider">Vegan</span>
             </div>
           )}
           {isSpicy && (
             <div className="bg-surface/90 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <Flame className="w-4 h-4 text-error" fill="currentColor" />
+              <Flame className="w-3.5 h-3.5 text-error" fill="currentColor" />
               <span className="text-[10px] font-bold text-on-surface uppercase tracking-wider">Spicy</span>
             </div>
           )}
           {isGlutenFree && (
             <div className="bg-surface/90 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <WheatOff className="w-4 h-4 text-[#d97706]" fill="currentColor" />
+              <WheatOff className="w-3.5 h-3.5 text-[#d97706]" fill="currentColor" />
               <span className="text-[10px] font-bold text-on-surface uppercase tracking-wider">GF</span>
             </div>
           )}
         </div>
       </div>
       
-      <div className="p-md flex flex-col flex-grow">
-        <div className="flex justify-between items-start mb-xs gap-2">
-          <h3 className="font-title-md text-title-md text-on-surface">{item.name}</h3>
-          <span className="font-price-display text-price-display text-primary whitespace-nowrap">
+      <div className="p-3 md:p-4 flex flex-col flex-grow">
+        <div className="flex justify-between items-start mb-1 gap-2">
+          <h3 className="font-semibold text-sm md:text-base text-on-surface line-clamp-1">{item.name}</h3>
+          <span className="font-bold text-sm md:text-base text-primary whitespace-nowrap">
             {formatPrice(item.price)}
           </span>
         </div>
         
-        <p className="text-body-sm text-on-surface-variant line-clamp-2 mb-md flex-grow">
+        <p className="text-body-sm text-on-surface-variant line-clamp-2 mb-3 flex-grow">
           {item.description}
         </p>
         
         <Link href={`/menu/item/${item.id}`} className="w-full mt-auto block">
-          <button className="w-full bg-primary text-on-primary font-label-caps text-label-caps py-3 rounded-lg hover:bg-primary-container hover:text-on-primary-container transition-colors active:scale-95 shadow-sm">
+          <button className="w-full bg-primary text-on-primary font-label-caps text-label-caps py-2.5 rounded-lg hover:bg-primary-container hover:text-on-primary-container transition-colors active:scale-95 shadow-sm">
             ADD TO CART
           </button>
         </Link>

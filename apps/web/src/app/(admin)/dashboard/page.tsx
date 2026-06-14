@@ -112,7 +112,7 @@ export default function DashboardOverviewPage() {
                   contentStyle={{ borderRadius: '16px', border: '1px solid var(--theme-outline-variant)', backgroundColor: 'var(--theme-surface)', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', color: 'var(--theme-on-surface)' }}
                   labelStyle={{ fontWeight: 'bold', color: 'var(--theme-on-surface)' }}
                 />
-                <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                <Legend wrapperStyle={{ paddingTop: '20px', color: 'currentColor' }} />
                 <Line yAxisId="left" type="monotone" name="Revenue ($)" dataKey="revenue" stroke="var(--theme-primary)" strokeWidth={4} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 8, strokeWidth: 0 }} />
                 <Line yAxisId="right" type="monotone" name="Orders" dataKey="orders" stroke="#10b981" strokeWidth={4} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 8, strokeWidth: 0 }} />
               </LineChart>
@@ -179,11 +179,11 @@ export default function DashboardOverviewPage() {
                     </td>
                     <td className="p-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold
-                        ${order.status === 'PENDING' ? 'bg-orange-100 text-orange-800' : ''}
-                        ${order.status === 'PREPARING' ? 'bg-blue-100 text-blue-800' : ''}
-                        ${order.status === 'READY' ? 'bg-green-100 text-green-800' : ''}
-                        ${order.status === 'PAID' || order.status === 'COMPLETED' ? 'bg-gray-100 text-gray-800' : ''}
-                        ${order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' : ''}
+                        ${order.status === 'PENDING' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' : ''}
+                        ${order.status === 'PREPARING' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : ''}
+                        ${order.status === 'READY' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ''}
+                        ${order.status === 'PAID' || order.status === 'COMPLETED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-300' : ''}
+                        ${order.status === 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : ''}
                       `}>
                         {order.status}
                       </span>

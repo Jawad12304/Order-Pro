@@ -76,12 +76,12 @@ export default function CartPage() {
   };
 
   return (
-    <div className="px-margin-mobile pt-8 pb-32">
-      <div className="flex items-center gap-4 mb-8">
-        <Link href="/menu" className="p-2 bg-surface-container-high rounded-full">
-          <ArrowLeft size={20} className="text-on-surface" />
+    <div className="px-4 md:px-margin-mobile pt-6 pb-32">
+      <div className="flex items-center gap-3 mb-6">
+        <Link href="/menu" className="p-2 bg-surface-container-high rounded-full shrink-0">
+          <ArrowLeft size={18} className="text-on-surface" />
         </Link>
-        <h1 className="text-headline-xl font-headline-xl text-on-surface">Your Cart</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-on-surface">Your Cart</h1>
       </div>
 
       {state.items.length === 0 ? (

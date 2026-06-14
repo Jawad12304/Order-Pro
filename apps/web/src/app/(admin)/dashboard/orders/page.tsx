@@ -72,14 +72,14 @@ export default function LiveOrdersPage() {
 
   const getStatusColor = (status: string) => {
     switch(status) {
-      case "PENDING": return "bg-orange-100 text-orange-800";
-      case "CONFIRMED": return "bg-blue-100 text-blue-800";
-      case "PREPARING": return "bg-purple-100 text-purple-800";
-      case "READY": return "bg-green-100 text-green-800";
-      case "SERVED": return "bg-teal-100 text-teal-800";
-      case "PAID": return "bg-gray-100 text-gray-800";
-      case "CANCELLED": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "PENDING": return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
+      case "CONFIRMED": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+      case "PREPARING": return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
+      case "READY": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+      case "SERVED": return "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300";
+      case "PAID": return "bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-300";
+      case "CANCELLED": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-300";
     }
   };
 
@@ -129,7 +129,7 @@ export default function LiveOrdersPage() {
       <div className="flex-1 flex gap-6 min-h-0">
         
         {/* Table / List */}
-        <div className={`bg-surface rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col transition-all duration-300 ${selectedOrder ? "w-2/3 hidden lg:flex" : "w-full"}`}>
+        <div className={`bg-surface rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col transition-all duration-300 ${selectedOrder ? "w-full lg:w-2/3 hidden lg:flex" : "w-full"}`}>
           <div className="overflow-y-auto custom-scrollbar flex-1">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-surface-container-low text-on-surface-variant text-label-md z-10 shadow-sm">
@@ -183,7 +183,7 @@ export default function LiveOrdersPage() {
 
         {/* Slide-out Order Details Panel */}
         {selectedOrder && (
-          <div className="w-full lg:w-1/3 bg-surface rounded-2xl shadow-lg border border-outline-variant/30 flex flex-col overflow-hidden animate-in slide-in-from-right-8 duration-300">
+          <div className="fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-auto w-full lg:w-1/3 bg-surface lg:rounded-2xl shadow-lg border-none lg:border lg:border-outline-variant/30 flex flex-col overflow-hidden animate-in slide-in-from-right-8 duration-300">
             <div className="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest">
               <div>
                 <h3 className="text-title-lg font-bold text-on-surface">Order #{selectedOrder.id.slice(-6)}</h3>

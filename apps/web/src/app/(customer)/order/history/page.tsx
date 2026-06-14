@@ -66,7 +66,7 @@ export default function OrderHistoryPage() {
   };
 
   return (
-    <div className="px-margin-mobile pt-8 pb-32 min-h-screen relative overflow-hidden">
+    <div className="px-4 md:px-margin-mobile pt-6 pb-32 min-h-screen relative overflow-hidden">
       {/* Background ambient gradient */}
       <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none -z-10" />
 
@@ -80,7 +80,7 @@ export default function OrderHistoryPage() {
           <Receipt size={28} className="text-primary" />
         </div>
         <div>
-          <h1 className="text-headline-lg font-headline-lg text-on-surface tracking-tight">Active Orders</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-on-surface tracking-tight">Active Orders</h1>
           <p className="text-body-sm text-on-surface-variant mt-0.5">Track your food in real-time</p>
         </div>
       </motion.div>

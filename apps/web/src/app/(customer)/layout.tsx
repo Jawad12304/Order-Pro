@@ -61,9 +61,9 @@ export default async function CustomerLayout({ children }: { children: React.Rea
         <QueryProvider>
           <CartProvider restaurantId={restaurantId} tablesMap={tablesMap}>
             {/* Top Navigation Shell */}
-            <header className="bg-surface/70 dark:bg-surface/70 backdrop-blur-xl shadow-sm docked full-width top-0 sticky z-50 flex justify-between items-center w-full px-margin-mobile h-16">
+            <header className="bg-surface/70 dark:bg-surface/70 backdrop-blur-xl shadow-sm sticky top-0 z-50 flex justify-between items-center w-full px-4 md:px-margin-mobile h-14 md:h-16">
               <div className="flex items-center gap-sm">
-                <h1 className="text-headline-lg-mobile font-headline-lg-mobile font-black text-primary dark:text-primary-fixed tracking-tight">
+                <h1 className="text-lg md:text-xl font-black text-primary dark:text-primary-fixed tracking-tight">
                   {name}
                 </h1>
               </div>
