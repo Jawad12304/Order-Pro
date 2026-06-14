@@ -109,7 +109,7 @@ export default function LiveOrdersPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 shrink-0 custom-scrollbar">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 shrink-0 custom-scrollbar max-w-full">
         {(["ALL", "PENDING", "CONFIRMED", "PREPARING", "READY", "SERVED", "PAID"] as const).map((tab) => (
           <button
             key={tab}
@@ -129,8 +129,8 @@ export default function LiveOrdersPage() {
       <div className="flex-1 flex gap-6 min-h-0">
         
         {/* Table / List */}
-        <div className={`bg-surface rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col transition-all duration-300 ${selectedOrder ? "w-full lg:w-2/3 hidden lg:flex" : "w-full"}`}>
-          <div className="overflow-y-auto custom-scrollbar flex-1">
+        <div className={`bg-surface rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col min-w-0 transition-all duration-300 ${selectedOrder ? "w-full lg:w-2/3 hidden lg:flex" : "w-full"}`}>
+          <div className="overflow-auto custom-scrollbar flex-1">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-surface-container-low text-on-surface-variant text-label-md z-10 shadow-sm">
                 <tr>
