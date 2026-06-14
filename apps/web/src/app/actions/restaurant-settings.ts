@@ -1,6 +1,6 @@
 "use server";
 
-import prisma from "@order-pro/database";
+import { prisma } from "@order-pro/database";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
