@@ -348,15 +348,15 @@ export default function AdminSettingsPage() {
       {/* Cropper Modal */}
       {isCropping && imageSrc && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-surface rounded-3xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col h-[85vh] md:h-[600px] border border-outline-variant/20">
-            <div className="p-4 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest">
+          <div className="bg-surface rounded-3xl shadow-xl w-[95vw] max-w-lg flex flex-col overflow-hidden border border-outline-variant/20" style={{ height: '600px', maxHeight: '85vh' }}>
+            <div className="p-4 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest shrink-0">
               <h3 className="text-title-md font-bold text-on-surface">Crop Profile Picture</h3>
               <button onClick={() => { setIsCropping(false); setImageSrc(null); }} className="text-on-surface-variant hover:text-on-surface">
                 <X size={20} />
               </button>
             </div>
             
-            <div className="relative flex-1 min-h-0 bg-black/10">
+            <div className="relative flex-1 w-full overflow-hidden bg-black/10">
               <Cropper
                 image={imageSrc}
                 crop={crop}
@@ -370,7 +370,7 @@ export default function AdminSettingsPage() {
               />
             </div>
             
-            <div className="p-6 bg-surface-container-lowest border-t border-outline-variant/20">
+            <div className="p-6 bg-surface-container-lowest border-t border-outline-variant/20 shrink-0">
               <div className="flex items-center gap-4 mb-6">
                 <span className="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Zoom</span>
                 <input
