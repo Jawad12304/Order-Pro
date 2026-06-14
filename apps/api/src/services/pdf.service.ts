@@ -64,7 +64,7 @@ export class PdfService {
       // Fetch and embed the QR Code image
       try {
         const qrResponse = await fetch(table.qrCodeUrl);
-        const qrArrayBuffer = await qrResponse.arrayBuffer();
+        const qrArrayBuffer = await (qrResponse as any).arrayBuffer();
         const qrImage = await pdfDoc.embedPng(qrArrayBuffer);
         
         const qrSize = 150;
