@@ -78,7 +78,7 @@ export async function generateLocalBackup(restaurantId: string) {
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
       include: {
-        categories: { include: { items: true } },
+        categories: { include: { menuItems: true } },
         tables: true,
         orders: { take: 100, orderBy: { createdAt: 'desc' } }
       }

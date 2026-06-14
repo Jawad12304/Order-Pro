@@ -121,7 +121,7 @@ router.get("/scan/:tableId", async (req: Request, res: Response) => {
         ipHash,
         userAgent,
       },
-    }).catch((err) => console.error("Failed to log QR scan:", err));
+    }).catch((err: any) => console.error("Failed to log QR scan:", err));
 
     // Sign a temporary JWT for the customer session
     // Uses the JWT secret (or another secret if preferred)

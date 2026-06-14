@@ -14,7 +14,7 @@ import { prisma } from "@order-pro/database";
 import { generateSlug } from "@order-pro/shared";
 import { redirect } from "next/navigation";
 
-export async function createRestaurantAction(formData: FormData) {
+export async function createRestaurantAction(formData: FormData): Promise<{ error?: string; success?: boolean; restaurantId?: string }> {
   const name = formData.get("name") as string;
   const themeColor = formData.get("themeColor") as string;
   const currency = formData.get("currency") as string;
@@ -29,7 +29,7 @@ export async function createRestaurantAction(formData: FormData) {
   return { error: "Onboarding is not yet available. Please contact the Super Admin." };
 }
 
-export async function createFirstTableAction(restaurantId: string, formData: FormData) {
+export async function createFirstTableAction(restaurantId: string, formData: FormData): Promise<{ error?: string; success?: boolean } | void> {
   const numberStr = formData.get("tableNumber") as string;
   const capacityStr = formData.get("capacity") as string;
 

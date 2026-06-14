@@ -1,9 +1,8 @@
 "use server";
 
-import { prisma } from "@order-pro/database";
+import { prisma, UserRole } from "@order-pro/database";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { UserRole } from "@prisma/client";
 
 const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
 

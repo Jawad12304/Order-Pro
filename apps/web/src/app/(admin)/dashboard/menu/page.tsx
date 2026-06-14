@@ -23,20 +23,23 @@ import {
   updateCategory,
   deleteCategory
 } from "@/app/actions/menu";
-import { arrayMove } from "@dnd-kit/sortable";
-
-// Dynamic imports for dnd-kit to reduce initial bundle size
-const DndContext = dynamic(() => import("@dnd-kit/core").then((mod) => mod.DndContext), { ssr: false });
-const SortableContext = dynamic(() => import("@dnd-kit/sortable").then((mod) => mod.SortableContext), { ssr: false });
-const verticalListSortingStrategy = dynamic(() => import("@dnd-kit/sortable").then((mod) => mod.verticalListSortingStrategy), { ssr: false }) as any;
-const rectSortingStrategy = dynamic(() => import("@dnd-kit/sortable").then((mod) => mod.rectSortingStrategy), { ssr: false }) as any;
-
-// To use hooks like useSortable inside dynamically imported components, we must import them normally
-// but we only render them when DndContext is ready.
-import { useSortable } from "@dnd-kit/sortable";
+import { 
+  arrayMove, 
+  useSortable, 
+  SortableContext, 
+  verticalListSortingStrategy, 
+  rectSortingStrategy, 
+  sortableKeyboardCoordinates 
+} from "@dnd-kit/sortable";
+import { 
+  DndContext, 
+  closestCenter, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors 
+} from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 const DIETARY_TAGS = ["Vegan", "Vegetarian", "Gluten-Free", "Spicy"];
 const ALLERGENS = ["Dairy", "Nuts", "Eggs", "Soy", "Shellfish", "Wheat"];
