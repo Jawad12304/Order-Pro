@@ -109,7 +109,7 @@ export default function LiveOrdersPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 shrink-0 custom-scrollbar max-w-full">
+      <div className="flex flex-wrap gap-2 mb-6 shrink-0 max-w-full">
         {(["ALL", "PENDING", "CONFIRMED", "PREPARING", "READY", "SERVED", "PAID"] as const).map((tab) => (
           <button
             key={tab}
