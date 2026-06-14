@@ -26,7 +26,7 @@ export default function TablesManagementPage() {
     getTables(restaurantId).then(data => {
       setTables(data);
       if (data.length > 0) {
-        setNewTableNum(Math.max(...data.map(t => t.number)) + 1);
+        setNewTableNum(Math.max(...data.map((t: any) => t.number)) + 1);
       }
     }).catch(console.error);
   };
