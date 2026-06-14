@@ -347,16 +347,18 @@ export default function AdminSettingsPage() {
 
       {/* Cropper Modal */}
       {isCropping && imageSrc && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-surface rounded-3xl shadow-xl w-[95vw] max-w-lg flex flex-col overflow-hidden border border-outline-variant/20" style={{ height: '600px', maxHeight: '85vh' }}>
-            <div className="p-4 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest shrink-0">
+        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm animate-in fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ width: '95vw', maxWidth: '512px', backgroundColor: 'var(--surface)', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', border: '1px solid var(--outline-variant)' }}>
+            {/* Header */}
+            <div style={{ padding: '16px', borderBottom: '1px solid var(--outline-variant)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--surface-container-lowest)' }}>
               <h3 className="text-title-md font-bold text-on-surface">Crop Profile Picture</h3>
-              <button onClick={() => { setIsCropping(false); setImageSrc(null); }} className="text-on-surface-variant hover:text-on-surface">
+              <button onClick={() => { setIsCropping(false); setImageSrc(null); }} className="text-on-surface-variant hover:text-on-surface p-1">
                 <X size={20} />
               </button>
             </div>
             
-            <div className="relative flex-1 w-full overflow-hidden bg-black/10">
+            {/* Cropper Area - explicit height so react-easy-crop can render */}
+            <div style={{ position: 'relative', width: '100%', height: '300px', backgroundColor: 'rgba(0,0,0,0.05)' }}>
               <Cropper
                 image={imageSrc}
                 crop={crop}
@@ -370,8 +372,9 @@ export default function AdminSettingsPage() {
               />
             </div>
             
-            <div className="p-6 bg-surface-container-lowest border-t border-outline-variant/20 shrink-0">
-              <div className="flex items-center gap-4 mb-6">
+            {/* Controls */}
+            <div style={{ padding: '20px 24px', borderTop: '1px solid var(--outline-variant)', backgroundColor: 'var(--surface-container-lowest)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                 <span className="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Zoom</span>
                 <input
                   type="range"
@@ -381,10 +384,11 @@ export default function AdminSettingsPage() {
                   step={0.1}
                   aria-labelledby="Zoom"
                   onChange={(e) => setZoom(Number(e.target.value))}
-                  className="w-full accent-primary h-1 bg-surface-variant rounded-full appearance-none cursor-pointer"
+                  className="w-full accent-primary"
+                  style={{ height: '4px' }}
                 />
               </div>
-              <div className="flex gap-3">
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <button 
                   onClick={() => { setIsCropping(false); setImageSrc(null); }}
                   className="flex-1 py-3 text-label-lg font-bold text-on-surface-variant bg-surface-variant rounded-xl hover:bg-surface-dim transition-colors"
