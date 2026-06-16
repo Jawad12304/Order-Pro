@@ -19,12 +19,33 @@ const allowedOrigins = [
   "http://localhost:3001",
   "https://orderpro.app",
 ];
+
+if (process.env.NEXT_PUBLIC_APP_URL) {
+  allowedOrigins.push(process.env.NEXT_PUBLIC_APP_URL);
+}
+
+if (process.env.ALLOWED_ORIGINS) {
+  allowedOrigins.push(...process.env.ALLOWED_ORIGINS.split(","));
+}
+
 const allowedOriginPatterns = [
   /^https:\/\/.*\.orderpro\.app$/,
+  /^http:\/\/.*\.localhost:3000$/,
 ];
 
+// Dynamically generate subdomain patterns based on NEXT_PUBLIC_APP_URL
+if (process.env.NEXT_PUBLIC_APP_URL) {
+  try {
+    const url = new URL(process.env.NEXT_PUBLIC_APP_URL);
+    const escapedHost = url.host.replace(/\./g, "\\.");
+    allowedOriginPatterns.push(new RegExp(`^${url.protocol}//.*\\.${escapedHost}$`));
+  } catch (e) {
+    // Ignore invalid URL
+  }
+}
+
 function isOriginAllowed(origin: string | undefined): boolean {
-  if (!origin) return false;
+  if (!origin) return true; // Allow requests with no origin
   if (allowedOrigins.includes(origin)) return true;
   return allowedOriginPatterns.some((pattern) => pattern.test(origin));
 }
