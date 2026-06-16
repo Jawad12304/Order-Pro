@@ -36,7 +36,13 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
   try {
     // Supabase signs JWTs with the JWT secret, not the public anon key.
     // Ensure SUPABASE_JWT_SECRET is in your .env
-    const decoded = jwt.verify(token, process.env.SUPABASE_JWT_SECRET!) as { sub: string };
+    const secret = process.env.SUPABASE_JWT_SECRET;
+    if (!secret) {
+      console.error("❌ [Auth Middleware] SUPABASE_JWT_SECRET is not configured on the server.");
+      return res.status(500).json({ error: "Internal authentication configuration error" });
+    }
+
+    const decoded = jwt.verify(token, secret) as { sub: string };
     
     // Attach authUserId to request, but we don't have the Staff/Restaurant details yet
     (req as any).authUserId = decoded.sub;

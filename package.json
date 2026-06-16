@@ -33,5 +33,8 @@
     "**/*.{json,md,css}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "postgres": "^3.4.9"
   }
 }

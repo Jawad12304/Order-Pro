@@ -12,17 +12,71 @@ dotenv.config({ path: path.resolve(__dirname, "../../..", ".env.local") });
 // Fallback: also try .env at the root
 dotenv.config({ path: path.resolve(__dirname, "../../..", ".env") });
 
+// --- ENVIRONMENT VARIABLE VALIDATION ---
+const requiredEnv = ["SUPABASE_JWT_SECRET", "DATABASE_URL"];
+const missingEnv = requiredEnv.filter((envName) => !process.env[envName]);
+if (missingEnv.length > 0) {
+  console.error(`❌ [Config Error] Missing required environment variables on startup: ${missingEnv.join(", ")}`);
+  console.error("Please configure them in your .env.local file.");
+  process.exit(1);
+}
+
 const PORT = process.env.PORT || 5000;
 
 // Create HTTP server
 const server = http.createServer(app);
 
-// Initialize Socket.io
+// --- CORS Configuration for Socket.io ---
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://orderpro.app",
+];
+
+if (process.env.NEXT_PUBLIC_APP_URL) {
+  allowedOrigins.push(process.env.NEXT_PUBLIC_APP_URL);
+}
+
+if (process.env.ALLOWED_ORIGINS) {
+  allowedOrigins.push(...process.env.ALLOWED_ORIGINS.split(","));
+}
+
+const allowedOriginPatterns = [
+  /^https:\/\/.*\.orderpro\.app$/,
+  /^http:\/\/.*\.localhost:3000$/,
+];
+
+// Dynamically generate subdomain patterns based on NEXT_PUBLIC_APP_URL
+if (process.env.NEXT_PUBLIC_APP_URL) {
+  try {
+    const url = new URL(process.env.NEXT_PUBLIC_APP_URL);
+    const escapedHost = url.host.replace(/\./g, "\\.");
+    allowedOriginPatterns.push(new RegExp(`^${url.protocol}//.*\\.${escapedHost}$`));
+  } catch (e) {
+    // Ignore invalid URL formatting in env
+  }
+}
+
+function isOriginAllowed(origin: string | undefined): boolean {
+  if (!origin) return true; // Allow requests with no origin (like mobile apps or curl)
+  if (allowedOrigins.includes(origin)) return true;
+  return allowedOriginPatterns.some((pattern) => pattern.test(origin));
+}
+
+// Initialize Socket.io with restricted CORS settings
 const io = new Server(server, {
   cors: {
-    origin: "*", // Adjust in production
-    methods: ["GET", "POST"]
-  }
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Origin not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  allowEIO3: true
 });
 
 // Pass Socket instance to Notification Service
