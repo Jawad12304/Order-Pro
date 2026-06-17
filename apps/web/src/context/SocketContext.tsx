@@ -21,8 +21,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Connect to the Express/Socket.io backend
-    // NEXT_PUBLIC_API_URL is e.g. "http://localhost:3001/api" — Socket.io needs the base URL without /api
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+    const defaultApiUrl = typeof window !== "undefined" && window.location.hostname !== "localhost"
+      ? "https://orderpro-api.up.railway.app/api"
+      : "http://localhost:3001/api";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || defaultApiUrl;
     const socketUrl = apiUrl.replace(/\/api\/?$/, "");
     const socketInstance = io(socketUrl, {
       autoConnect: true,
