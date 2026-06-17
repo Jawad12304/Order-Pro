@@ -16,6 +16,8 @@
     "@order-pro/database": "workspace:*",
     "@order-pro/shared": "workspace:*",
     "@sentry/nextjs": "^10.56.0",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.107.0",
     "@tanstack/react-query": "^5.101.0",
     "axios": "^1.17.0",
     "bcryptjs": "^2.4.3",
