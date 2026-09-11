@@ -9,7 +9,7 @@ const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12);
 export async function getAdminProfile(username: string) {
   try {
     const user = await prisma.user.findFirst({
-      where: { username: { equals: username, mode: "insensitive" } },
+      where: { username },
       select: {
         username: true,
         avatarUrl: true,
@@ -32,7 +32,7 @@ export async function getAdminProfile(username: string) {
 export async function updateAdminProfile(username: string, data: { newUsername: string, avatarUrl: string | null }) {
   try {
     const user = await prisma.user.findFirst({
-      where: { username: { equals: username, mode: "insensitive" } }
+      where: { username }
     });
     if (!user) throw new Error("User not found");
 
@@ -55,7 +55,7 @@ export async function updateAdminProfile(username: string, data: { newUsername: 
 export async function changeAdminPassword(username: string, newPassword: string) {
   try {
     const user = await prisma.user.findFirst({
-      where: { username: { equals: username, mode: "insensitive" } }
+      where: { username }
     });
     if (!user) throw new Error("User not found");
 

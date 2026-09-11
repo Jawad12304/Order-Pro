@@ -102,7 +102,7 @@ export async function login(
   let user;
   try {
     user = await prisma.user.findFirst({
-      where: { username: { equals: username, mode: "insensitive" } },
+      where: { username },
       include: { restaurant: true },
     });
   } catch (err: any) {

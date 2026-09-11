@@ -4,9 +4,8 @@
 // ==========================================
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -26,7 +25,7 @@ model SubscriptionPlan {
   isPopular      Boolean      @default(false)
   badgeText      String?
   badgeColor     String?
-  features       String[]     // PostgreSQL array of text
+  features       Json?        // Array of text features e.g. ["3 Tables max", "Unlimited Orders"]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -102,7 +101,7 @@ model Restaurant {
   id               String           @id @default(cuid())
   name             String
   slug             String           @unique
-  logoUrl          String?
+  logoUrl          String?          @db.Text
   themeColor       String?          @default("#F97316") // Orange-500
   currency         String           @default("USD")
   settingsJson       Json?            // Flexible config: tax rate, service charge, operating hours, etc.
@@ -178,8 +177,8 @@ model Category {
   restaurantId String
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   name         String
-  description  String?
-  imageUrl     String?
+  description  String?    @db.Text
+  imageUrl     String?    @db.Text
   sortOrder    Int        @default(0)
   isVisible    Boolean    @default(true)
   createdAt    DateTime   @default(now())
@@ -203,13 +202,13 @@ model MenuItem {
   categoryId   String
   category     Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   name         String
-  description  String?
+  description  String?    @db.Text
   price        Float
-  imageUrl     String?
+  imageUrl     String?    @db.LongText
   isAvailable  Boolean    @default(true)
   prepTimeMins Int?
-  allergens    String[]   // PostgreSQL native array: ["Gluten", "Dairy", "Nuts"]
-  tags         String[]   // PostgreSQL native array: ["Spicy", "Vegan", "Chef's Special"]
+  allergens    Json?      // JSON array: ["Gluten", "Dairy", "Nuts"]
+  tags         Json?      // JSON array: ["Spicy", "Vegan", "Chef's Special"]
   sortOrder    Int        @default(0)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -318,7 +317,7 @@ model Order {
   subtotalAmount  Float        @default(0)
   taxAmount       Float        @default(0)
   totalAmount     Float        @default(0)
-  notes           String?
+  notes           String?      @db.Text
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -345,7 +344,7 @@ model OrderItem {
   quantity            Int      @default(1)
   unitPrice           Float    // Snapshot of price at time of order
   modifiersJson       Json?    // Snapshot: [{ "group": "Size", "modifier": "Large", "priceDelta": 2.0 }]
-  specialInstructions String?
+  specialInstructions String?  @db.Text
   createdAt           DateTime @default(now())
 
   @@index([orderId])
@@ -401,7 +400,7 @@ model User {
   username      String      // Login identifier (unique within a restaurant)
   email         String?     @unique
   displayName   String?     @map("display_name")
-  avatarUrl     String?     @map("avatar_url")
+  avatarUrl     String?     @db.Text @map("avatar_url")
   passwordHash  String      @map("password_hash") // bcrypt hash
   role          UserRole
   restaurantId  String?     @map("restaurant_id") // NULL for SUPER_ADMIN only
@@ -427,7 +426,7 @@ model MasterAccessLog {
   id         String   @id @default(cuid())
   username   String
   ipAddress  String   @map("ip_address")
-  userAgent  String   @map("user_agent")
+  userAgent  String   @db.Text @map("user_agent")
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([username])

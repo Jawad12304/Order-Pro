@@ -1,27 +1,29 @@
 # Dependencies
 node_modules/
-/apps/web/node_modules/
-/apps/kitchen/node_modules/
-/apps/api/node_modules/
-/packages/shared/node_modules/
+**/node_modules/
+
+# Virtual environments
+.venv/
+
+# Scratch & temporary
+scratch/
 
 # Production builds
 dist/
-/apps/api/dist/
-/packages/shared/dist/
+**/dist/
 .next/
-/apps/web/.next/
-/apps/kitchen/.next/
+**/.next/
 
 # Turborepo
 .turbo/
 
 # Environments
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*.local
+**/.env
+**/.env*.local
+!.env.example
+!.env.production.example
 
 # Logs
 npm-debug.log*

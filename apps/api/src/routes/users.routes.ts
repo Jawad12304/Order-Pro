@@ -87,7 +87,7 @@ router.post("/", async (req: Request, res: Response) => {
     const existing = await prisma.user.findFirst({
       where: {
         restaurantId,
-        username: { equals: username, mode: "insensitive" },
+        username,
       },
     });
     if (existing) {
