@@ -20,11 +20,15 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Connect to the Express/Socket.io backend
-    const defaultApiUrl = typeof window !== "undefined" && window.location.hostname !== "localhost"
-      ? "https://orderpro-api.up.railway.app"
-      : "http://localhost:5000";
-    const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || defaultApiUrl, {
+    let socketUrl = "";
+    if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.startsWith("/")) {
+      socketUrl = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "");
+    } else if (typeof window !== "undefined") {
+      socketUrl = window.location.origin;
+    } else {
+      socketUrl = "http://localhost:5000";
+    }
+    const socketInstance = io(socketUrl, {
       autoConnect: true,
       transports: ["websocket"],
     });
