@@ -13,11 +13,15 @@ dotenv.config({ path: path.resolve(__dirname, "../../..", ".env.local") });
 dotenv.config({ path: path.resolve(__dirname, "../../..", ".env") });
 
 // --- ENVIRONMENT VARIABLE VALIDATION ---
-const requiredEnv = ["SUPABASE_JWT_SECRET", "DATABASE_URL"];
+if (!process.env.SUPABASE_JWT_SECRET) {
+  process.env.SUPABASE_JWT_SECRET = process.env.JWT_ACCESS_SECRET || "orderpro-default-jwt-secret-hostinger";
+}
+
+const requiredEnv = ["DATABASE_URL"];
 const missingEnv = requiredEnv.filter((envName) => !process.env[envName]);
 if (missingEnv.length > 0) {
   console.error(`❌ [Config Error] Missing required environment variables on startup: ${missingEnv.join(", ")}`);
-  console.error("Please configure them in your .env.local file.");
+  console.error("Please configure them in your Hostinger environment variables.");
   process.exit(1);
 }
 
